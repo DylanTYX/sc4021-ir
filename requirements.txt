@@ -1,0 +1,5 @@
+Django==5.2.11
+pysolr==3.11.0
+python-dateutil==2.9.0.post0
+gunicorn==25.1.0
+python-dotenv==1.2.1
