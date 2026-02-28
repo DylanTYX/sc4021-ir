@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1",
+    "text": "Train was delayed during peak hours, very crowded.",
+    "mrt_line": ["NSL"],
+    "aspect": ["reliability", "overcrowding"],
+    "sentiment": ["negative"],
+    "timestamp": "2026-02-14T08:30:00Z",
+    "source": "mock"
+  },
+  {
+    "id": "2",
+    "text": "Clean trains and stations today, staff were helpful.",
+    "mrt_line": ["EWL"],
+    "aspect": ["cleanliness", "staff"],
+    "sentiment": ["positive"],
+    "timestamp": "2026-02-13T09:00:00Z",
+    "source": "mock"
+  }
+]
