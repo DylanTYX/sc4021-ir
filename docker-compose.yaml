@@ -6,6 +6,13 @@ services:
     container_name: sc4021_solr
     ports:
       - "8983:8983"
+    volumes:
+      - ./solr/configsets/political_opinions:/opt/solr/server/solr/configsets/political_opinions:ro
+      - solr_data:/var/solr
     command:
       - solr-precreate
-      - mrt_opinions
+      - political_opinions
+      - /opt/solr/server/solr/configsets/political_opinions
+
+volumes:
+  solr_data:
