@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  Schema for the political_opinions Solr core.
+  To ensure everyone share the exact same schema.
+  To apply changes: rebuild the container with `docker compose down -v && docker compose up`.
+-->
+<schema name="political_opinions" version="1.6">
+
+  <!-- Unique key -->
+  <uniqueKey>id</uniqueKey>
+
+  <!-- Core fields -->
+  <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false"/>
+  <field name="text" type="text_en" indexed="true" stored="true"/>
+  <field name="sentiment" type="string" indexed="true" stored="true"/>
+  <field name="sentiment_score" type="pfloat" indexed="true" stored="true"/>
+  <field name="party" type="string" indexed="true" stored="true" multiValued="true"/>
+  <field name="person" type="string" indexed="true" stored="true" multiValued="true"/>
+  <field name="created_at" type="pdate" indexed="true" stored="true"/>
+  <field name="upvotes" type="pint" indexed="true" stored="true"/>
+
+  <!-- Required internal field -->
+  <field name="_version_" type="plong" indexed="false" stored="false"/>
+
+  <!-- Primitive field types -->
+  <fieldType name="string" class="solr.StrField" sortMissingLast="true" docValues="true"/>
+  <fieldType name="plong" class="solr.LongPointField" docValues="true"/>
+  <fieldType name="pfloat" class="solr.FloatPointField" docValues="true"/>
+  <fieldType name="pint" class="solr.IntPointField" docValues="true"/>
+  <fieldType name="pdate" class="solr.DatePointField" docValues="true"/>
+
+  <!-- Full-text English field type -->
+  <!--
+    Self-contained: no external stopword / synonym files required.
+    Uses standard tokenisation + lowercase + Porter stemming.
+  -->
+  <fieldType name="text_en" class="solr.TextField" positionIncrementGap="100">
+    <analyzer type="index">
+      <tokenizer class="solr.StandardTokenizerFactory"/>
+      <filter class="solr.LowerCaseFilterFactory"/>
+      <filter class="solr.PorterStemFilterFactory"/>
+    </analyzer>
+    <analyzer type="query">
+      <tokenizer class="solr.StandardTokenizerFactory"/>
+      <filter class="solr.LowerCaseFilterFactory"/>
+      <filter class="solr.PorterStemFilterFactory"/>
+    </analyzer>
+  </fieldType>
+
+</schema>
