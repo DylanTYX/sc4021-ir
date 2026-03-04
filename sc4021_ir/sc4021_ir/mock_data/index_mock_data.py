@@ -1,20 +1,30 @@
-import pysolr
 import json
 import os
+import sys
+import requests
 
-# Solr URL for your core
-SOLR_URL = "http://localhost:8983/solr/mrt_opinions"
-solr = pysolr.Solr(SOLR_URL, always_commit=True)
+SOLR_UPDATE_URL = "http://localhost:8983/solr/political_opinions/update?commit=true"
 
-# Path to mock data JSON
 current_dir = os.path.dirname(os.path.abspath(__file__))
 json_path = os.path.join(current_dir, "mock_data.json")
 
-# Load mock data
-with open(json_path, "r") as f:
+# Load documents
+with open(json_path, "r", encoding="utf-8") as f:
     docs = json.load(f)
 
-# Index data into Solr
-solr.add(docs)
+# Post to Solr via JSON update handler
+response = requests.post(
+    SOLR_UPDATE_URL,
+    headers={"Content-Type": "application/json"},
+    data=json.dumps(docs),
+    timeout=30,
+)
 
-print(f"✅ Indexed {len(docs)} mock documents into Solr core 'mrt_opinions'")
+if response.ok:
+    print(f"✅ Indexed {len(docs)} documents into Solr core 'political_opinions'")
+else:
+    print(
+        f"❌ Indexing failed — HTTP {response.status_code}: {response.text}",
+        file=sys.stderr,
+    )
+    sys.exit(1)

@@ -1,20 +1,122 @@
 [
   {
     "id": "1",
-    "text": "Train was delayed during peak hours, very crowded.",
-    "mrt_line": ["NSL"],
-    "aspect": ["reliability", "overcrowding"],
-    "sentiment": ["negative"],
-    "timestamp": "2026-02-14T08:30:00Z",
-    "source": "mock"
+    "text": "Workers' Party performed strongly in GE2020, winning Sengkang GRC and retaining Aljunied GRC.",
+    "sentiment": "positive",
+    "sentiment_score": 0.85,
+    "party": ["Workers' Party"],
+    "person": ["Pritam Singh", "Sylvia Lim"],
+    "created_at": "2020-07-11T00:00:00Z",
+    "upvotes": 312
   },
   {
     "id": "2",
-    "text": "Clean trains and stations today, staff were helpful.",
-    "mrt_line": ["EWL"],
-    "aspect": ["cleanliness", "staff"],
-    "sentiment": ["positive"],
-    "timestamp": "2026-02-13T09:00:00Z",
-    "source": "mock"
+    "text": "PAP maintained its supermajority in parliament with over 83% of seats. A strong mandate for governance.",
+    "sentiment": "positive",
+    "sentiment_score": 0.78,
+    "party": ["People's Action Party"],
+    "person": ["Lee Hsien Loong"],
+    "created_at": "2020-07-11T00:00:00Z",
+    "upvotes": 204
+  },
+  {
+    "id": "3",
+    "text": "PSP secured some votes in the West Coast GRC but fell short of winning a seat. Progress Singapore Party is still building momentum.",
+    "sentiment": "neutral",
+    "sentiment_score": 0.10,
+    "party": ["Progress Singapore Party"],
+    "person": ["Tan Cheng Bock"],
+    "created_at": "2020-07-12T00:00:00Z",
+    "upvotes": 87
+  },
+  {
+    "id": "4",
+    "text": "Disappointed with the lack of opposition representation in many constituencies. We need stronger checks and balances.",
+    "sentiment": "negative",
+    "sentiment_score": -0.62,
+    "party": ["Workers' Party", "Singapore Democratic Party"],
+    "person": [],
+    "created_at": "2020-07-13T00:00:00Z",
+    "upvotes": 145
+  },
+  {
+    "id": "5",
+    "text": "Pritam Singh's recognition as Leader of the Opposition is a watershed moment for Singapore's parliamentary democracy.",
+    "sentiment": "positive",
+    "sentiment_score": 0.91,
+    "party": ["Workers' Party"],
+    "person": ["Pritam Singh"],
+    "created_at": "2020-09-01T00:00:00Z",
+    "upvotes": 489
+  },
+  {
+    "id": "6",
+    "text": "The PAP's handling of the Covid-19 pandemic has been efficient, but civil liberties concerns remain under the heightened restrictions.",
+    "sentiment": "neutral",
+    "sentiment_score": -0.05,
+    "party": ["People's Action Party"],
+    "person": ["Lawrence Wong"],
+    "created_at": "2021-05-15T00:00:00Z",
+    "upvotes": 173
+  },
+  {
+    "id": "7",
+    "text": "SDP's alternative budget proposals make a lot of sense for lower-income households. More parties should put forward detailed policy platforms.",
+    "sentiment": "positive",
+    "sentiment_score": 0.66,
+    "party": ["Singapore Democratic Party"],
+    "person": ["Chee Soon Juan"],
+    "created_at": "2022-03-10T00:00:00Z",
+    "upvotes": 98
+  },
+  {
+    "id": "8",
+    "text": "Lawrence Wong's leadership style is pragmatic and measured. He communicates policy clearly to the public.",
+    "sentiment": "positive",
+    "sentiment_score": 0.74,
+    "party": ["People's Action Party"],
+    "person": ["Lawrence Wong"],
+    "created_at": "2023-11-20T00:00:00Z",
+    "upvotes": 227
+  },
+  {
+    "id": "9",
+    "text": "The transport fee hike on top of rising cost of living is deeply frustrating. The government seems out of touch.",
+    "sentiment": "negative",
+    "sentiment_score": -0.79,
+    "party": ["People's Action Party"],
+    "person": [],
+    "created_at": "2024-01-08T00:00:00Z",
+    "upvotes": 391
+  },
+  {
+    "id": "10",
+    "text": "Workers' Party's town council management in Aljunied has improved substantially. Accountability matters.",
+    "sentiment": "positive",
+    "sentiment_score": 0.70,
+    "party": ["Workers' Party"],
+    "person": ["Sylvia Lim"],
+    "created_at": "2024-03-22T00:00:00Z",
+    "upvotes": 156
+  },
+  {
+    "id": "11",
+    "text": "GE2025 is approaching. Expecting fierce competition in marginal constituencies. Voters are more politically aware than ever.",
+    "sentiment": "neutral",
+    "sentiment_score": 0.12,
+    "party": ["Workers' Party", "People's Action Party", "Progress Singapore Party"],
+    "person": [],
+    "created_at": "2025-01-05T00:00:00Z",
+    "upvotes": 263
+  },
+  {
+    "id": "12",
+    "text": "PPP has yet to present a credible platform that resonates with young Singaporean voters.",
+    "sentiment": "negative",
+    "sentiment_score": -0.45,
+    "party": ["People's Power Party"],
+    "person": ["Goh Meng Seng"],
+    "created_at": "2025-02-14T00:00:00Z",
+    "upvotes": 44
   }
 ]
