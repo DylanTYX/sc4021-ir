@@ -4,82 +4,95 @@ import json
 from collections import defaultdict
 from dateutil import parser
 
-# Connect to Solr core
-SOLR_URL = "http://localhost:8983/solr/mrt_opinions"
+# Solr connection
+SOLR_URL = "http://localhost:8983/solr/political_opinions"
 solr = pysolr.Solr(SOLR_URL, always_commit=True)
+
+ROWS_PER_PAGE = 10
+
+# Maps sort_by request parameter → Solr sort expression
+SORT_OPTIONS = {
+    "relevance": "score desc",
+    "newest": "created_at desc",
+    "oldest": "created_at asc",
+    "upvotes": "upvotes desc",
+}
 
 
 # Main search view
 def search_view(request):
-    # Get query parameters
     query = request.GET.get("q", "").strip()
-    selected_line = request.GET.get("mrt_line", "")
-    selected_aspect = request.GET.get("aspect", "")
-    selected_sentiment = request.GET.get("sentiment", "")
-    page_num = int(request.GET.get("page", 1))
+    selected_sentiment = request.GET.get("sentiment", "").strip()
+    selected_party = request.GET.get("party", "").strip()
+    selected_person = request.GET.get("person", "").strip()
+    date_start = request.GET.get("date_start", "").strip()  # YYYY-MM-DD
+    date_end = request.GET.get("date_end", "").strip()  # YYYY-MM-DD
+    sort_by = request.GET.get("sort_by", "relevance").strip()
+    page_num = max(1, int(request.GET.get("page", 1)))
 
-    rows_per_page = 10
+    # Full-text search on the "text" field; fall back to match-all
+    solr_query = f"text:({query})" if query else "*:*"
 
-    # Build Solr query string
-    query_parts = []
-    if query:
-        query_parts.append(f"text:({query})")
-    if selected_line:
-        query_parts.append(f"mrt_line:{selected_line}")
-    if selected_aspect:
-        query_parts.append(f"aspect:{selected_aspect}")
-    if selected_sentiment:
-        query_parts.append(f"sentiment:{selected_sentiment}")
-
-    solr_query = " AND ".join(query_parts) if query_parts else "*:*"
-
-    # Pagination
-    start = (page_num - 1) * rows_per_page
-
-    # Execute Solr search
-    try:
-        results = solr.search(
-            solr_query,
-            start=start,
-            rows=rows_per_page,
-            **{
-                "fl": "text,mrt_line,aspect,sentiment,timestamp,source",
-                "sort": "timestamp desc",
-            },
-        )
-    except Exception as e:
-        context = {"error": f"Solr query failed: {str(e)}"}
-        return render(request, "search/index.html", context)
-
-    # Map Solr results to template
-    mapped_results = [
-        {
-            "text": doc.get("text", ""),
-            "mrt_line": doc.get("mrt_line", ""),
-            "aspect": doc.get("aspect", ""),
-            "sentiment": doc.get("sentiment", ""),
-            "timestamp": (
-                parser.parse(doc.get("timestamp", "")) if doc.get("timestamp") else None
-            ),
-            "source": doc.get("source", ""),
-        }
-        for doc in results
-    ]
-
-    total_results = results.hits
-    total_pages = (total_results + rows_per_page - 1) // rows_per_page
-
-    # Generate chart data using Solr faceting
-    chart_data = get_sentiment_distribution(
-        query, selected_line, selected_aspect, selected_sentiment
+    # Filter queries (fq)
+    fq = _build_filter_queries(
+        selected_sentiment, selected_party, selected_person, date_start, date_end
     )
 
-    # Context to pass to template
+    # Sort
+    sort = SORT_OPTIONS.get(sort_by, SORT_OPTIONS["relevance"])
+
+    # Pagination
+    start = (page_num - 1) * ROWS_PER_PAGE
+
+    # Execute search
+    try:
+        search_kwargs = {
+            "fl": "id,text,sentiment,sentiment_score,party,person,created_at,upvotes",
+            "sort": sort,
+        }
+        if fq:
+            search_kwargs["fq"] = fq
+
+        results = solr.search(
+            solr_query, start=start, rows=ROWS_PER_PAGE, **search_kwargs
+        )
+    except Exception as e:
+        return render(
+            request, "search/index.html", {"error": f"Solr query failed: {e}"}
+        )
+
+    # Map results to template-friendly dicts
+    mapped_results = []
+    for doc in results:
+        raw_date = doc.get("created_at")
+        mapped_results.append(
+            {
+                "id": doc.get("id", ""),
+                "text": doc.get("text", ""),
+                "sentiment": doc.get("sentiment", ""),
+                "sentiment_score": doc.get("sentiment_score"),
+                "party": doc.get("party", []),
+                "person": doc.get("person", []),
+                "created_at": parser.parse(raw_date) if raw_date else None,
+                "upvotes": doc.get("upvotes", 0),
+            }
+        )
+
+    total_results = results.hits
+    total_pages = max(1, (total_results + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
+
+    # Chart data
+    chart_data = get_sentiment_distribution(solr_query, fq)
+
+    # Template context
     context = {
         "query": query,
-        "selected_line": selected_line,
-        "selected_aspect": selected_aspect,
         "selected_sentiment": selected_sentiment,
+        "selected_party": selected_party,
+        "selected_person": selected_person,
+        "date_start": date_start,
+        "date_end": date_end,
+        "sort_by": sort_by,
         "page": page_num,
         "total_pages": total_pages,
         "total_results": total_results,
@@ -90,58 +103,64 @@ def search_view(request):
     return render(request, "search/index.html", context)
 
 
-# Helper: get sentiment distribution for chart
-def get_sentiment_distribution(query, mrt_line, aspect, sentiment):
-    """
-    Returns sentiment counts per aspect for Chart.js
-    """
+# Helper: build filter queries list
+def _build_filter_queries(sentiment, party, person, date_start, date_end):
+    """Return a list of Solr fq strings based on active filter values."""
+    fq = []
+
+    if sentiment:
+        fq.append(f"sentiment:{sentiment}")
+
+    if party:
+        # Quote multi-word values
+        fq.append(f'party:"{party}"')
+
+    if person:
+        fq.append(f'person:"{person}"')
+
+    if date_start or date_end:
+        start = f"{date_start}T00:00:00Z" if date_start else "*"
+        end = f"{date_end}T23:59:59Z" if date_end else "*"
+        fq.append(f"created_at:[{start} TO {end}]")
+
+    return fq
+
+
+# Helper: sentiment distribution per party for Chart.js
+def get_sentiment_distribution(solr_query, fq):
+    """Return sentiment counts broken down by party for Chart.js stacked/pie charts."""
     try:
-        # Remove aspect filter for chart to show all aspects
-        solr_query = build_solr_query(query, mrt_line, None, sentiment)
+        search_kwargs = {
+            "rows": 0,
+            "facet": "on",
+            "facet.pivot": "party,sentiment",
+            "facet.mincount": 1,
+        }
+        if fq:
+            search_kwargs["fq"] = fq
 
-        facet_results = solr.search(
-            solr_query,
-            rows=0,  # only need facets
-            **{"facet": "on", "facet.pivot": "aspect,sentiment"},
-        )
+        facet_results = solr.search(solr_query, **search_kwargs)
 
-        aspects_data = defaultdict(lambda: {"positive": 0, "neutral": 0, "negative": 0})
+        parties_data = defaultdict(lambda: {"positive": 0, "neutral": 0, "negative": 0})
 
         pivot = facet_results.raw_response.get("facet_counts", {}).get(
             "facet_pivot", {}
         )
-        aspect_sentiment = pivot.get("aspect,sentiment", [])
 
-        for aspect_item in aspect_sentiment:
-            aspect_name = aspect_item["value"]
-            for sentiment_item in aspect_item.get("pivot", []):
-                sentiment_name = sentiment_item["value"]
-                count = sentiment_item["count"]
-                aspects_data[aspect_name][sentiment_name] = count
+        for party_item in pivot.get("party,sentiment", []):
+            party_name = party_item["value"]
+            for sentiment_item in party_item.get("pivot", []):
+                parties_data[party_name][sentiment_item["value"]] = sentiment_item[
+                    "count"
+                ]
 
-        sorted_aspects = sorted(aspects_data.keys())
-        chart_data = {
-            "labels": [a.title() for a in sorted_aspects],
-            "positive": [aspects_data[a]["positive"] for a in sorted_aspects],
-            "neutral": [aspects_data[a]["neutral"] for a in sorted_aspects],
-            "negative": [aspects_data[a]["negative"] for a in sorted_aspects],
+        sorted_parties = sorted(parties_data.keys())
+        return {
+            "labels": sorted_parties,
+            "positive": [parties_data[p]["positive"] for p in sorted_parties],
+            "neutral": [parties_data[p]["neutral"] for p in sorted_parties],
+            "negative": [parties_data[p]["negative"] for p in sorted_parties],
         }
-        return chart_data
 
-    except Exception as e:
-        # fallback
+    except Exception:
         return {"labels": [], "positive": [], "neutral": [], "negative": []}
-
-
-# Helper: Build Solr query string
-def build_solr_query(query, mrt_line, aspect, sentiment):
-    query_parts = []
-    if query:
-        query_parts.append(f"text:({query})")
-    if mrt_line:
-        query_parts.append(f"mrt_line:{mrt_line}")
-    if aspect:
-        query_parts.append(f"aspect:{aspect}")
-    if sentiment:
-        query_parts.append(f"sentiment:{sentiment}")
-    return " AND ".join(query_parts) if query_parts else "*:*"
