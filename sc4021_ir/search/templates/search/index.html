@@ -4,298 +4,604 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MRT Opinion Search Engine - SC4021</title>
+    <title>Singapore Political Sentiment Analysis - SC4021</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{% static 'search/style.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <h1>🚇 MRT Opinion Search Engine</h1>
-            <p class="subtitle">Aspect-Based Sentiment Analysis for Singapore's MRT System</p>
-        </header>
-
-        <!-- Search Section -->
-        <section class="search-section">
-            <form method="GET" action="{% url 'search' %}" id="searchForm">
-                <!-- Search Box -->
-                <div class="search-box">
-                    <input 
-                        type="text" 
-                        name="q" 
-                        id="searchQuery"
-                        placeholder="Search MRT commuter opinions (e.g., 'train delays during peak hours')..."
+    <body>
+        {% comment %} NAVIGATION BAR {% endcomment %}
+        <nav class="topnav">
+            <div class="topnav-brand">
+                <div class="brand-icon">
+                    <i class="bi bi-bar-chart-fill"></i>
+                </div>
+                <div>
+                    <span class="brand-title">Singapore Political Sentiment Analysis</span>
+                    <span class="brand-sub">SC4021 · Information Retrieval</span>
+                </div>
+            </div>
+            <div class="topnav-right">
+                <form method="GET" action="{% url 'search' %}" class="topnav-search" id="searchFormTop">
+                    <input
+                        type="text"
+                        name="q"
+                        id="searchQueryTop"
+                        class="topnav-search-input"
+                        placeholder="Search political discourse…"
                         value="{{ query }}"
-                        class="search-input"
+                        autocomplete="off"
                     >
-                    <button type="submit" class="search-button">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.35-4.35"></path>
-                        </svg>
-                        Search
+                    <!-- propagate sidebar filter values so top search doesn't reset them -->
+                    <input type="hidden" name="sentiment"  id="hidSentiment"  value="{{ selected_sentiment }}">
+                    <input type="hidden" name="party"      id="hidParty"      value="{{ selected_party }}">
+                    <input type="hidden" name="person"     id="hidPerson"     value="{{ selected_person }}">
+                    <input type="hidden" name="date_start" id="hidDateStart"  value="{{ date_start }}">
+                    <input type="hidden" name="date_end"   id="hidDateEnd"    value="{{ date_end }}">
+                    <input type="hidden" name="election"   id="hidElection"   value="{{ election_period }}">
+                    <input type="hidden" name="sort_by"    id="hidSort"       value="{{ sort_by }}">
+                    <button type="submit" class="topnav-search-btn">
+                        <i class="bi bi-search"></i>
                     </button>
-                </div>
-
-                <!-- Filters -->
-                <div class="filters">
-                    <div class="filter-group">
-                        <label for="mrt_line">MRT Line</label>
-                        <select name="mrt_line" id="mrt_line" class="filter-select">
-                            <option value="">All Lines</option>
-                            <option value="NSL" {% if selected_line == 'NSL' %}selected{% endif %}>North-South Line (NSL)</option>
-                            <option value="EWL" {% if selected_line == 'EWL' %}selected{% endif %}>East-West Line (EWL)</option>
-                            <option value="CCL" {% if selected_line == 'CCL' %}selected{% endif %}>Circle Line (CCL)</option>
-                            <option value="NEL" {% if selected_line == 'NEL' %}selected{% endif %}>North-East Line (NEL)</option>
-                            <option value="DTL" {% if selected_line == 'DTL' %}selected{% endif %}>Downtown Line (DTL)</option>
-                            <option value="TEL" {% if selected_line == 'TEL' %}selected{% endif %}>Thomson-East Coast Line (TEL)</option>
-                            <option value="CRL" {% if selected_line == 'CRL' %}selected{% endif %}>Cross Island Line (CRL)</option>
-                        </select>
-                    </div>
-
-                    <div class="filter-group">
-                        <label for="aspect">Aspect</label>
-                        <select name="aspect" id="aspect" class="filter-select">
-                            <option value="">All Aspects</option>
-                            <option value="reliability" {% if selected_aspect == 'reliability' %}selected{% endif %}>Reliability</option>
-                            <option value="overcrowding" {% if selected_aspect == 'overcrowding' %}selected{% endif %}>Overcrowding</option>
-                            <option value="cleanliness" {% if selected_aspect == 'cleanliness' %}selected{% endif %}>Cleanliness</option>
-                            <option value="maintenance" {% if selected_aspect == 'maintenance' %}selected{% endif %}>Maintenance</option>
-                            <option value="safety" {% if selected_aspect == 'safety' %}selected{% endif %}>Safety</option>
-                            <option value="accessibility" {% if selected_aspect == 'accessibility' %}selected{% endif %}>Accessibility</option>
-                            <option value="pricing" {% if selected_aspect == 'pricing' %}selected{% endif %}>Pricing</option>
-                            <option value="staff" {% if selected_aspect == 'staff' %}selected{% endif %}>Staff Service</option>
-                        </select>
-                    </div>
-
-                    <div class="filter-group">
-                        <label for="sentiment">Sentiment</label>
-                        <select name="sentiment" id="sentiment" class="filter-select">
-                            <option value="">All Sentiments</option>
-                            <option value="positive" {% if selected_sentiment == 'positive' %}selected{% endif %}>Positive</option>
-                            <option value="neutral" {% if selected_sentiment == 'neutral' %}selected{% endif %}>Neutral</option>
-                            <option value="negative" {% if selected_sentiment == 'negative' %}selected{% endif %}>Negative</option>
-                        </select>
-                    </div>
-
-                    <button type="button" class="clear-filters" onclick="clearFilters()">Clear Filters</button>
-                </div>
-            </form>
-        </section>
-
-        <!-- Results Summary & Visualization Toggle -->
-        {% if results %}
-        <section class="results-header">
-            <div class="results-summary">
-                <span class="results-count">Found <strong>{{ total_results }}</strong> opinions</span>
-                {% if query %}
-                    <span class="query-display">for "<strong>{{ query }}</strong>"</span>
+                </form>
+                {% if query or selected_sentiment or selected_party or selected_person %}
+                <span class="topnav-active-pill">
+                    <i class="bi bi-funnel-fill"></i> Filters active
+                </span>
                 {% endif %}
             </div>
-            <button type="button" class="toggle-chart" onclick="toggleChart()">
-                <span id="chartToggleText">Show</span> Sentiment Distribution
-            </button>
-        </section>
+        </nav>
 
-        <!-- Sentiment Distribution Chart (Initially Hidden) -->
-        <section class="chart-section" id="chartSection" style="display: none;">
-            <h3>Sentiment Distribution by Aspect</h3>
-            <div class="chart-container">
-                <canvas id="sentimentChart"></canvas>
-            </div>
-        </section>
 
-        <!-- Results Table -->
-        <section class="results-section">
-            <div class="table-container">
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th class="col-text">Opinion Text</th>
-                            <th class="col-line">MRT Line</th>
-                            <th class="col-aspect">Aspect</th>
-                            <th class="col-sentiment">Sentiment</th>
-                            <th class="col-timestamp">Date</th>
-                            <th class="col-source">Source</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+        <div class="layout-wrapper">
+
+            {% comment %} LEFT SIDEBAR {% endcomment %}
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-inner">
+                    <form method="GET" action="{% url 'search' %}" id="searchForm">
+                        <input type="hidden" name="q" id="hidQuery" value="{{ query }}">
+
+                        {% comment %} Sentiment {% endcomment %}
+                        <div class="filter-section">
+                            <h6 class="filter-heading">
+                                <i class="bi bi-emoji-smile"></i> Sentiment
+                            </h6>
+                            <div class="filter-options">
+                                {% for val, label, icon in sentiment_choices %}
+                                <label class="filter-chip {% if selected_sentiment == val %}active{% endif %}">
+                                    <input type="radio" name="sentiment" value="{{ val }}"
+                                        {% if selected_sentiment == val %}checked{% endif %}
+                                        onchange="document.getElementById('searchForm').submit()">
+                                    {{ icon }} {{ label }}
+                                </label>
+                                {% empty %}
+                                <label class="filter-chip {% if selected_sentiment == '' %}active{% endif %}">
+                                    <input type="radio" name="sentiment" value=""
+                                        {% if selected_sentiment == '' %}checked{% endif %}
+                                        onchange="document.getElementById('searchForm').submit()"> All
+                                </label>
+                                <label class="filter-chip sentiment-positive {% if selected_sentiment == 'positive' %}active{% endif %}">
+                                    <input type="radio" name="sentiment" value="positive"
+                                        {% if selected_sentiment == 'positive' %}checked{% endif %}
+                                        onchange="document.getElementById('searchForm').submit()">
+                                    <i class="bi bi-emoji-smile-fill"></i> Positive
+                                </label>
+                                <label class="filter-chip sentiment-neutral {% if selected_sentiment == 'neutral' %}active{% endif %}">
+                                    <input type="radio" name="sentiment" value="neutral"
+                                        {% if selected_sentiment == 'neutral' %}checked{% endif %}
+                                        onchange="document.getElementById('searchForm').submit()">
+                                    <i class="bi bi-emoji-neutral-fill"></i> Neutral
+                                </label>
+                                <label class="filter-chip sentiment-negative {% if selected_sentiment == 'negative' %}active{% endif %}">
+                                    <input type="radio" name="sentiment" value="negative"
+                                        {% if selected_sentiment == 'negative' %}checked{% endif %}
+                                        onchange="document.getElementById('searchForm').submit()">
+                                    <i class="bi bi-emoji-frown-fill"></i> Negative
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {% comment %} Political Party {% endcomment %}
+                        <div class="filter-section">
+                            <h6 class="filter-heading">
+                                <i class="bi bi-flag"></i> Political Party
+                            </h6>
+                            <select name="party" id="partySelect" class="filter-select"
+                                    onchange="document.getElementById('searchForm').submit()">
+                                <option value="">All Parties</option>
+                                <option value="Workers' Party"           {% if selected_party == "Workers' Party" %}selected{% endif %}>Workers' Party (WP)</option>
+                                <option value="People's Action Party"    {% if selected_party == "People's Action Party" %}selected{% endif %}>People's Action Party (PAP)</option>
+                                <option value="Progress Singapore Party" {% if selected_party == 'Progress Singapore Party' %}selected{% endif %}>Progress Singapore Party (PSP)</option>
+                                <option value="Singapore Democratic Party" {% if selected_party == 'Singapore Democratic Party' %}selected{% endif %}>Singapore Democratic Party (SDP)</option>
+                                <option value="People's Power Party"     {% if selected_party == "People's Power Party" %}selected{% endif %}>People's Power Party (PPP)</option>
+                            </select>
+                        </div>
+
+                        {% comment %} Key Figures {% endcomment %}
+                        <div class="filter-section">
+                            <h6 class="filter-heading">
+                                <i class="bi bi-person"></i> Key Figure
+                            </h6>
+                            <select name="person" id="personSelect" class="filter-select"
+                                    onchange="document.getElementById('searchForm').submit()">
+                                <option value="">All Figures</option>
+                                <option value="Pritam Singh"    {% if selected_person == 'Pritam Singh' %}selected{% endif %}>Pritam Singh</option>
+                                <option value="Sylvia Lim"      {% if selected_person == 'Sylvia Lim' %}selected{% endif %}>Sylvia Lim</option>
+                                <option value="Leon Perera"     {% if selected_person == 'Leon Perera' %}selected{% endif %}>Leon Perera</option>
+                                <option value="Lee Hsien Loong" {% if selected_person == 'Lee Hsien Loong' %}selected{% endif %}>Lee Hsien Loong</option>
+                                <option value="Lawrence Wong"   {% if selected_person == 'Lawrence Wong' %}selected{% endif %}>Lawrence Wong</option>
+                                <option value="Tan Cheng Bock"  {% if selected_person == 'Tan Cheng Bock' %}selected{% endif %}>Tan Cheng Bock</option>
+                                <option value="Goh Meng Seng"   {% if selected_person == 'Goh Meng Seng' %}selected{% endif %}>Goh Meng Seng</option>
+                            </select>
+                        </div>
+
+                        {% comment %} Date Range {% endcomment %}
+                        <div class="filter-section">
+                            <h6 class="filter-heading">
+                                <i class="bi bi-calendar3"></i> Date Range
+                            </h6>
+                            <div class="date-inputs">
+                                <label class="date-label">From</label>
+                                <input type="date" name="date_start" id="dateStart"
+                                    class="filter-date" value="{{ date_start }}"
+                                    onchange="document.getElementById('searchForm').submit()">
+                                <label class="date-label mt-2">To</label>
+                                <input type="date" name="date_end" id="dateEnd"
+                                    class="filter-date" value="{{ date_end }}"
+                                    onchange="document.getElementById('searchForm').submit()">
+                            </div>
+                        </div>
+
+                        {% comment %} Election Period {% endcomment %}
+                        <div class="filter-section">
+                            <h6 class="filter-heading">
+                                <i class="bi bi-check2-square"></i> Election Period
+                            </h6>
+                            <label class="toggle-label">
+                                <div class="toggle-switch">
+                                    <input type="checkbox" name="election" id="electionToggle" value="1"
+                                        {% if election_period %}checked{% endif %}
+                                        onchange="document.getElementById('searchForm').submit()">
+                                    <span class="toggle-slider"></span>
+                                </div>
+                                <span class="toggle-text">
+                                    {% if election_period %}Showing election-period posts only{% else %}Include all periods{% endif %}
+                                </span>
+                            </label>
+                        </div>
+
+                        {% comment %} Sort By {% endcomment %}
+                        <div class="filter-section">
+                            <h6 class="filter-heading">
+                                <i class="bi bi-sort-down"></i> Sort By
+                            </h6>
+                            <select name="sort_by" id="sortSelect" class="filter-select"
+                                    onchange="document.getElementById('searchForm').submit()">
+                                <option value="relevance" {% if sort_by == 'relevance' or not sort_by %}selected{% endif %}>Relevance</option>
+                                <option value="newest"    {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
+                                <option value="oldest"    {% if sort_by == 'oldest' %}selected{% endif %}>Oldest First</option>
+                                <option value="upvotes"   {% if sort_by == 'upvotes' %}selected{% endif %}>Most Upvotes</option>
+                            </select>
+                        </div>
+
+                        {% comment %} Clear Filters {% endcomment %}
+                        <button type="button" class="btn-clear-all" onclick="clearAllFilters()">
+                            <i class="bi bi-x-circle"></i> Clear All Filters
+                        </button>
+                    </form>
+                </div>
+            </aside>
+
+            <main class="main-content">
+
+                {% comment %} HERO STRIP {% endcomment %}
+                <div class="hero-strip">
+                    <div class="hero-text">
+                        <h1 class="hero-title">Political Sentiment Dashboard</h1>
+                        <p class="hero-sub">Real-time analysis of public discourse on Singapore politics</p>
+                    </div>
+                    {% if total_results %}
+                    <div class="hero-stats">
+                        <div class="stat-pill">
+                            <i class="bi bi-chat-square-text"></i>
+                            <span><strong>{{ total_results }}</strong> comments</span>
+                        </div>
+                        {% if query %}
+                        <div class="stat-pill">
+                            <i class="bi bi-search"></i>
+                            <span>"{{ query }}"</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% comment %} ANALYTICS DASHBOARD {% endcomment %}
+                <section class="analytics-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="bi bi-graph-up"></i> Analytics Overview
+                        </h2>
+                        {% if total_results %}
+                        <span class="results-meta">
+                            <strong>{{ total_results }}</strong> records
+                            {% if query %} matching <em>"{{ query }}"</em>{% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="charts-grid">
+                        {% comment %} Pie: Sentiment Distribution {% endcomment %}
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <span class="chart-card-title">Sentiment Distribution</span>
+                                <i class="bi bi-pie-chart-fill chart-icon"></i>
+                            </div>
+                            <div class="chart-wrap chart-wrap-sm">
+                                <canvas id="pieChart"></canvas>
+                            </div>
+                        </div>
+
+                        {% comment %} Bar: Sentiment by Party {% endcomment %}
+                        <div class="chart-card chart-card-wide">
+                            <div class="chart-card-header">
+                                <span class="chart-card-title">Sentiment by Political Party</span>
+                                <i class="bi bi-bar-chart-fill chart-icon"></i>
+                            </div>
+                            <div class="chart-wrap">
+                                <canvas id="barChart"></canvas>
+                            </div>
+                        </div>
+
+                        {% comment %} Line: Sentiment Trend {% endcomment %}
+                        <div class="chart-card chart-card-full">
+                            <div class="chart-card-header">
+                                <span class="chart-card-title">Sentiment Trend Over Time</span>
+                                <i class="bi bi-graph-up-arrow chart-icon"></i>
+                            </div>
+                            <div class="chart-wrap">
+                                <canvas id="lineChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {% comment %} SEARCH RESULTS {% endcomment %}
+                <section class="results-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="bi bi-chat-square-text"></i> Comments
+                        </h2>
+                    </div>
+
+                    {% if results %}
+                    <div class="results-list">
                         {% for result in results %}
-                        <tr>
-                            <td class="opinion-text">{{ result.text }}</td>
-                            <td>
-                                <span class="line-badge line-{{ result.mrt_line|lower }}">
-                                    {{ result.mrt_line }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="aspect-tag">{{ result.aspect|join:" "|title }}</span>
-                            </td>
-                            <td>
-                                <span class="sentiment-badge sentiment-{{ result.sentiment|lower }}">
-                                    {% if result.sentiment == 'positive' %}😊 Positive
-                                    {% elif result.sentiment == 'negative' %}😞 Negative
-                                    {% else %}😐 Neutral{% endif %}
-                                </span>
-                            </td>
-                            <td class="timestamp">{{ result.timestamp|date:"d M Y, H:i" }}</td>
-                            <td>
-                                <span class="source-badge">{{ result.source }}</span>
-                            </td>
-                        </tr>
+                        <article class="comment-card card-{{ result.sentiment|lower }}">
+                            <div class="comment-card-body">
+                                {% comment %} Sentiment badge {% endcomment %}
+                                <div class="comment-header">
+                                    <span class="sentiment-badge sentiment-{{ result.sentiment|lower }}">
+                                        {% if result.sentiment == 'positive' %}
+                                            <i class="bi bi-emoji-smile-fill"></i> Positive
+                                        {% elif result.sentiment == 'negative' %}
+                                            <i class="bi bi-emoji-frown-fill"></i> Negative
+                                        {% else %}
+                                            <i class="bi bi-emoji-neutral-fill"></i> Neutral
+                                        {% endif %}
+                                    </span>
+                                    <div class="comment-meta-right">
+                                        {% if result.upvotes %}
+                                        <span class="upvote-pill">
+                                            <i class="bi bi-arrow-up-circle-fill"></i> {{ result.upvotes }}
+                                        </span>
+                                        {% endif %}
+                                        <span class="comment-date">
+                                            <i class="bi bi-clock"></i>
+                                            {{ result.timestamp|date:"d M Y" }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {% comment %} Comment text {% endcomment %}
+                                <p class="comment-text">{{ result.text }}</p>
+
+                                {% comment %} Tags row {% endcomment %}
+                                <div class="tags-row">
+                                    {% comment %} Party tags {% endcomment %}
+                                    {% if result.party %}
+                                        {% if result.party|length > 1 %}
+                                            {% for p in result.party %}
+                                            <span class="tag tag-party">
+                                                <i class="bi bi-flag-fill"></i> {{ p }}
+                                            </span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="tag tag-party">
+                                                <i class="bi bi-flag-fill"></i> {{ result.party }}
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+
+                                    {% comment %} Person tags {% endcomment %}
+                                    {% if result.persons %}
+                                        {% for person in result.persons %}
+                                        <span class="tag tag-person">
+                                            <i class="bi bi-person-fill"></i> {{ person }}
+                                        </span>
+                                        {% endfor %}
+                                    {% endif %}
+
+                                    {% comment %} Source badge {% endcomment %}
+                                    {% if result.source %}
+                                    <span class="tag tag-source">
+                                        <i class="bi bi-link-45deg"></i> {{ result.source }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </article>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            {% if total_results > results|length %}
-            <div class="pagination">
-                {% if page > 1 %}
-                <a href="?q={{ query }}&mrt_line={{ selected_line }}&aspect={{ selected_aspect }}&sentiment={{ selected_sentiment }}&page={{ page|add:"-1" }}" class="page-link">
-                    ← Previous
-                </a>
-                {% endif %}
-                
-                <span class="page-info">Page {{ page }} of {{ total_pages }}</span>
-                
-                {% if page < total_pages %}
-                <a href="?q={{ query }}&mrt_line={{ selected_line }}&aspect={{ selected_aspect }}&sentiment={{ selected_sentiment }}&page={{ page|add:"1" }}" class="page-link">
-                    Next →
-                </a>
-                {% endif %}
-            </div>
-            {% endif %}
-        </section>
-        {% else %}
-            {% if query or selected_line or selected_aspect or selected_sentiment %}
-            <section class="no-results">
-                <div class="no-results-content">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.35-4.35"></path>
-                        <line x1="11" y1="8" x2="11" y2="14"></line>
-                        <line x1="8" y1="11" x2="14" y2="11"></line>
-                    </svg>
-                    <h3>No results found</h3>
-                    <p>Try adjusting your search query or filters</p>
-                </div>
-            </section>
-            {% else %}
-            <section class="welcome">
-                <div class="welcome-content">
-                    <h2>Welcome to the MRT Opinion Search Engine</h2>
-                    <p>Search and analyze commuter opinions about Singapore's MRT system with aspect-based sentiment analysis.</p>
-                    <div class="info-cards">
-                        <div class="info-card">
-                            <h4>🔍 Free-text Search</h4>
-                            <p>Search opinions using natural language queries</p>
-                        </div>
-                        <div class="info-card">
-                            <h4>🎯 Filter by Aspects</h4>
-                            <p>Reliability, cleanliness, overcrowding, and more</p>
-                        </div>
-                        <div class="info-card">
-                            <h4>📊 Sentiment Analysis</h4>
-                            <p>View positive, negative, and neutral sentiments</p>
-                        </div>
                     </div>
-                </div>
-            </section>
-            {% endif %}
-        {% endif %}
-    </div>
 
-    <script>
-        // Chart data from Django context
-        const chartData = {{ chart_data|safe }};
+                    {% comment %} Pagination {% endcomment %}
+                    {% if total_pages > 1 %}
+                    <nav class="pagination-nav" aria-label="Results pagination">
+                        <ul class="pagination-list">
+                            {% if page > 1 %}
+                            <li>
+                                <a class="page-btn"
+                                href="?q={{ query }}&sentiment={{ selected_sentiment }}&party={{ selected_party }}&person={{ selected_person }}&date_start={{ date_start }}&date_end={{ date_end }}&election={{ election_period }}&sort={{ sort_by }}&page={{ page|add:"-1" }}">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                            {% endif %}
 
-        // Toggle chart visibility
-        function toggleChart() {
-            const chartSection = document.getElementById('chartSection');
-            const toggleText = document.getElementById('chartToggleText');
-            
-            if (chartSection.style.display === 'none') {
-                chartSection.style.display = 'block';
-                toggleText.textContent = 'Hide';
-                if (!window.sentimentChart) {
-                    renderChart();
-                }
-            } else {
-                chartSection.style.display = 'none';
-                toggleText.textContent = 'Show';
-            }
-        }
+                            <li class="page-info">Page {{ page }} of {{ total_pages }}</li>
 
-        // Render sentiment distribution chart
-        function renderChart() {
-            const ctx = document.getElementById('sentimentChart').getContext('2d');
-            
-            window.sentimentChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: chartData.labels,
-                    datasets: [
-                        {
-                            label: 'Positive',
-                            data: chartData.positive,
-                            backgroundColor: '#10b981',
-                        },
-                        {
-                            label: 'Neutral',
-                            data: chartData.neutral,
-                            backgroundColor: '#6b7280',
-                        },
-                        {
-                            label: 'Negative',
-                            data: chartData.negative,
-                            backgroundColor: '#ef4444',
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: false
-                        }
+                            {% if page < total_pages %}
+                            <li>
+                                <a class="page-btn"
+                                href="?q={{ query }}&sentiment={{ selected_sentiment }}&party={{ selected_party }}&person={{ selected_person }}&date_start={{ date_start }}&date_end={{ date_end }}&election={{ election_period }}&sort={{ sort_by }}&page={{ page|add:"1" }}">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                    {% else %}
+
+                        {% if query or selected_sentiment or selected_party or selected_person or date_start or date_end %}
+                        {% comment %} No Results {% endcomment %}
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="bi bi-search"></i></div>
+                            <h4>No results found</h4>
+                            <p>Try broadening your search or adjusting the filters.</p>
+                            <button type="button" class="btn-clear-all" onclick="clearAllFilters()">
+                                <i class="bi bi-x-circle"></i> Clear Filters
+                            </button>
+                        </div>
+                        {% else %}
+                        {% comment %} Welcome State {% endcomment %}
+                        <div class="welcome-state">
+                            <div class="welcome-grid">
+                                <div class="welcome-card">
+                                    <div class="welcome-card-icon"><i class="bi bi-search"></i></div>
+                                    <h5>Free-text Search</h5>
+                                    <p>Query Reddit, Twitter, and forum posts using natural language.</p>
+                                </div>
+                                <div class="welcome-card">
+                                    <div class="welcome-card-icon"><i class="bi bi-funnel"></i></div>
+                                    <h5>Advanced Filters</h5>
+                                    <p>Filter by party, key figures, date range, and election periods.</p>
+                                </div>
+                                <div class="welcome-card">
+                                    <div class="welcome-card-icon"><i class="bi bi-graph-up"></i></div>
+                                    <h5>Sentiment Analytics</h5>
+                                    <p>Visualise trends with interactive charts powered by Chart.js.</p>
+                                </div>
+                            </div>
+                            <p class="welcome-hint">
+                                <i class="bi bi-arrow-up-circle"></i>
+                                Use the search bar above or the filters on the left to get started.
+                            </p>
+                        </div>
+                        {% endif %}
+
+                    {% endif %}
+                </section>
+            </main>
+        </div>
+
+        {% comment %} JAVASCRIPT {% endcomment %}
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            {% comment %} Django context {% endcomment %}
+            const chartData = {{ chart_data|safe }};
+
+            {% comment %} Palette {% endcomment %}
+            const COLOR_POS = '#22c55e';
+            const COLOR_NEU = '#94a3b8';
+            const COLOR_NEG = '#ef4444';
+            const COLOR_NAVY = '#1a3a5c';
+            const COLOR_ACCENT = '#c0392b';
+
+            {% comment %} Common Chart defaults {% endcomment %}
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.font.size = 12;
+            Chart.defaults.color = '#64748b';
+
+            {% comment %} PIE CHART — Sentiment Distribution {% endcomment %}
+            (function buildPie() {
+                const totPos = (chartData.positive || []).reduce((a, b) => a + b, 0);
+                const totNeu = (chartData.neutral  || []).reduce((a, b) => a + b, 0);
+                const totNeg = (chartData.negative || []).reduce((a, b) => a + b, 0);
+
+                const ctx = document.getElementById('pieChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Positive', 'Neutral', 'Negative'],
+                        datasets: [{
+                            data: [totPos, totNeu, totNeg],
+                            backgroundColor: [COLOR_POS, COLOR_NEU, COLOR_NEG],
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                            hoverOffset: 6
+                        }]
                     },
-                    scales: {
-                        x: {
-                            stacked: true,
-                        },
-                        y: {
-                            stacked: true,
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Number of Opinions'
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '62%',
+                        plugins: {
+                            legend: { position: 'bottom', labels: { padding: 16, boxWidth: 12 } },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => {
+                                        const total = totPos + totNeu + totNeg;
+                                        const pct   = total ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                                        return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                                    }
+                                }
                             }
                         }
                     }
-                }
-            });
-        }
+                });
+            })();
 
-        // Clear all filters
-        function clearFilters() {
-            document.getElementById('mrt_line').value = '';
-            document.getElementById('aspect').value = '';
-            document.getElementById('sentiment').value = '';
-            document.getElementById('searchForm').submit();
-        }
+            {% comment %} BAR CHART — Sentiment by Party {% endcomment %}
+            (function buildBar() {
+                // chartData.labels holds party or aspect labels depending on backend;
+                // placeholder parties if labels are empty
+                const labels = (chartData.labels && chartData.labels.length)
+                    ? chartData.labels
+                    : ['WP', 'PAP', 'PSP', 'SDP', 'PPP'];
 
-        // Auto-submit form when filters change
-        document.querySelectorAll('.filter-select').forEach(select => {
-            select.addEventListener('change', function() {
-                document.getElementById('searchForm').submit();
+                const positive = chartData.positive || labels.map(() => 0);
+                const neutral  = chartData.neutral  || labels.map(() => 0);
+                const negative = chartData.negative || labels.map(() => 0);
+
+                const ctx = document.getElementById('barChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            { label: 'Positive', data: positive, backgroundColor: COLOR_POS, borderRadius: 4 },
+                            { label: 'Neutral',  data: neutral,  backgroundColor: COLOR_NEU, borderRadius: 4 },
+                            { label: 'Negative', data: negative, backgroundColor: COLOR_NEG, borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { padding: 16, boxWidth: 12 } }
+                        },
+                        scales: {
+                            x: { stacked: true, grid: { display: false } },
+                            y: {
+                                stacked: true,
+                                beginAtZero: true,
+                                grid: { color: '#f1f5f9' },
+                                ticks: { stepSize: 1 }
+                            }
+                        }
+                    }
+                });
+            })();
+
+            {% comment %} LINE CHART — Sentiment Trend {% endcomment %}
+            (function buildLine() {
+                // placeholder monthly labels — replace with real backend data
+                const trendLabels   = chartData.trend_labels   || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+                const trendPositive = chartData.trend_positive || trendLabels.map(() => 0);
+                const trendNeutral  = chartData.trend_neutral  || trendLabels.map(() => 0);
+                const trendNegative = chartData.trend_negative || trendLabels.map(() => 0);
+
+                const ctx = document.getElementById('lineChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: trendLabels,
+                        datasets: [
+                            {
+                                label: 'Positive',
+                                data: trendPositive,
+                                borderColor: COLOR_POS,
+                                backgroundColor: COLOR_POS + '18',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Neutral',
+                                data: trendNeutral,
+                                borderColor: COLOR_NEU,
+                                backgroundColor: COLOR_NEU + '18',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Negative',
+                                data: trendNegative,
+                                borderColor: COLOR_NEG,
+                                backgroundColor: COLOR_NEG + '18',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { position: 'top', labels: { padding: 16, boxWidth: 12 } }
+                        },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#f1f5f9' },
+                                title: { display: true, text: 'Number of Posts' }
+                            }
+                        }
+                    }
+                });
+            })();
+
+            {% comment %} Clear all filters {% endcomment %}
+            function clearAllFilters() {
+                const params = new URLSearchParams();
+                const q = document.getElementById('searchQueryTop')?.value || '';
+                if (q) params.set('q', q);
+                window.location.href = '{% url "search" %}?' + params.toString();
+            }
+
+            {% comment %} Sync top-search hidden inputs from sidebar form {% endcomment %}
+            document.getElementById('searchForm').addEventListener('submit', function() {
+                document.getElementById('hidSentiment').value = document.querySelector('[name=sentiment]:checked')?.value || '';
+                document.getElementById('hidParty').value = document.getElementById('partySelect')?.value || '';
+                document.getElementById('hidPerson').value = document.getElementById('personSelect')?.value || '';
+                document.getElementById('hidDateStart').value = document.getElementById('dateStart')?.value || '';
+                document.getElementById('hidDateEnd').value = document.getElementById('dateEnd')?.value || '';
+                document.getElementById('hidElection').value = document.getElementById('electionToggle')?.checked ? '1' : '';
+                document.getElementById('hidSort').value = document.getElementById('sortSelect')?.value || '';
             });
-        });
-    </script>
-</body>
+        </script>
+    </body>
 </html>
