@@ -1,8 +1,6 @@
 # SC4021 Information Retrieval Project
 
-A Django web application for searching and visualizing Worker's Party opinions, powered by Apache Solr for advanced indexing and search capabilities.
-
-> **Note:** This repository was initially built for MRT Opinions and later adapted for Worker's Party content. Docker Compose configuration is under development, and the Solr schema may undergo changes.
+A Django web application for searching and analysing political sentiment in Singapore, powered by Apache Solr.
 
 ## 📋 Table of Contents
 
@@ -10,60 +8,71 @@ A Django web application for searching and visualizing Worker's Party opinions, 
 - [Prerequisites](#prerequisites)
 - [Setup Instructions](#setup-instructions)
 - [Running the Application](#running-the-application)
+- [Solr — Common Commands](#solr--common-commands)
 - [Project Structure](#project-structure)
 
 ## 🎯 Project Description
 
-This Django web application provides a search interface for exploring opinions and content related to the Worker's Party. The application features:
+This Django web application provides a search and sentiment analysis interface for Singapore political discourse. Features:
 
-- **Backend:** Django framework with Apache Solr integration for powerful full-text search
-- **Frontend:** Django template-based UI with custom styling
-- **Search Engine:** Apache Solr for indexing and advanced search capabilities
+- **Backend:** Django + Apache Solr for full-text search and faceted filtering
+- **Frontend:** Django templates with Chart.js visualisations
+- **Filters:** sentiment, party, key figure, date range, sort order
 
 ## 📦 Prerequisites
 
-Before you begin, ensure you have the following installed:
-
-- **Python 3.11+** - [Download Python](https://www.python.org/downloads/)
-- **pip** - Python package installer (usually included with Python)
-- **Git** - [Download Git](https://git-scm.com/downloads)
-
-### Optional (for Solr deployment):
-
-- **Docker** - Required if running Solr in a container locally
+- **Python 3.11+** — [Download](https://www.python.org/downloads/)
+- **Docker Desktop** — [Download](https://www.docker.com/products/docker-desktop/) (runs Solr, no local install needed)
+- **Git** — [Download](https://git-scm.com/downloads)
 
 ## 🚀 Setup Instructions
 
-### 1. Clone the Repository
+### 1. Clone the repository
 
 ```bash
 git clone <repo-url>
 cd sc4021-ir
 ```
 
-### 2. Create a Python Virtual Environment
+### 2. Create and activate a Python virtual environment
 
-**Linux / macOS:**
+**macOS / Linux:**
+
 ```bash
 python -m venv venv
 source venv/bin/activate
 ```
 
 **Windows:**
+
 ```cmd
 python -m venv venv
 venv\Scripts\activate
 ```
 
-### 3. Install Dependencies
+### 3. Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Set Up Environment Variables (Optional)
+### 4. Start Solr with Docker
 
-Create a `.env` file in the project root for environment-specific configuration:
+```bash
+docker compose up -d
+```
+
+This spins up a Solr container and **automatically creates the `political_opinions` core** using the schema checked into the repo (`solr/configsets/`). Everyone on the team gets the exact same schema — no manual setup needed.
+
+> First time only — seed the core with mock data:
+>
+> ```bash
+> python sc4021_ir/sc4021_ir/mock_data/index_mock_data.py
+> ```
+
+### 5. Set up environment variables (optional)
+
+Create a `.env` file in the project root:
 
 ```env
 DJANGO_SECRET_KEY=your-dev-secret-key
@@ -71,37 +80,51 @@ DJANGO_SECRET_KEY=your-dev-secret-key
 
 ## ▶️ Running the Application
 
-### Start the Django Development Server
-
 ```bash
 cd sc4021_ir
 python manage.py runserver
 ```
 
-### Access the Application
+Open [http://localhost:8000](http://localhost:8000) in your browser.
 
-Open your browser and navigate to: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+## 🐳 Solr — Common Commands
 
-> You can also use http://localhost:8000 - both addresses point to the same local server.
+Think of `docker compose` like a power strip for the app:
+
+| Command                  | What it does                              |
+| ------------------------ | ----------------------------------------- |
+| `docker compose up -d`   | Start Solr in the background              |
+| `docker compose down`    | Stop Solr (your indexed data is **kept**) |
+| `docker compose down -v` | Stop Solr **and wipe all indexed data**   |
+
+> After a `down -v` (full reset), re-run `index_mock_data.py` to reseed.
+
+Your indexed documents are stored in a Docker **named volume** (`solr_data`), so they survive normal `down`/`up` restarts. Only `-v` deletes them.
 
 ## 📁 Project Structure
 
 ```
 sc4021-ir/
-├── sc4021_ir/              # Django project root
-│   ├── manage.py           # Django management script
-│   ├── sc4021_ir/          # Main project settings
-│   │   ├── settings.py     # Django configuration
-│   │   ├── urls.py         # URL routing
-│   │   └── mock_data/      # Mock data for development
-│   └── search/             # Search application
-│       ├── views.py        # View logic
-│       ├── models.py       # Data models
-│       ├── urls.py         # App-specific URLs
-│       ├── static/         # CSS and static files
-│       └── templates/      # HTML templates
-├── requirements.txt        # Python dependencies
-└── README.md              # This file
+├── docker-compose.yaml         # Solr container config
+├── solr/
+│   └── configsets/
+│       └── political_opinions/
+│           └── conf/
+│               ├── schema.xml      # Solr field definitions (version-controlled)
+│               └── solrconfig.xml  # Solr request handlers
+├── sc4021_ir/                  # Django project root
+│   ├── manage.py
+│   ├── sc4021_ir/
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── mock_data/          # Mock documents + indexing script
+│   └── search/                 # Search app
+│       ├── views.py
+│       ├── urls.py
+│       ├── static/             # CSS
+│       └── templates/          # HTML templates
+├── requirements.txt
+└── README.md
 ```
 
 ---
