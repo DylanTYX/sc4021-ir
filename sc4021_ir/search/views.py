@@ -3,6 +3,7 @@ import pysolr
 import json
 from collections import defaultdict
 from dateutil import parser
+from collections import Counter
 
 # Solr connection
 SOLR_URL = "http://localhost:8983/solr/political_opinions"
@@ -85,6 +86,9 @@ def search_view(request):
     # Chart data
     chart_data = get_sentiment_distribution(solr_query, fq)
 
+    # Word cloud data
+    wordcloud_data = get_wordcloud_data(solr_query, fq)
+
     # Template context
     context = {
         "query": query,
@@ -99,6 +103,7 @@ def search_view(request):
         "total_results": total_results,
         "results": mapped_results,
         "chart_data": json.dumps(chart_data),
+        "wordcloud_data": json.dumps(wordcloud_data),
         "election_year": election_year,
     }
 
@@ -172,3 +177,19 @@ def get_sentiment_distribution(solr_query, fq):
 
     except Exception:
         return {"labels": [], "positive": [], "neutral": [], "negative": []}
+
+# Helper: pre-processing of data for word cloud generation
+def get_wordcloud_data(solr_query, fq, top_n=50):
+    #get up to 1000 docs
+    results = solr.search(solr_query, rows=1000, fl="text", fq=fq)
+
+    #concatenate all text
+    all_text = " ".join([doc.get("text", "") for doc in results])
+
+    #basic word filtering
+    stopwords = {"the", "its", "still", "with", "but", "and", "is", "to", "of", "in", "a", "for", "on"}  # you can expand
+    words = [w for w in all_text.split() if w.lower() not in stopwords]
+
+    #bount word frequencies
+    counter = Counter(words)
+    return [[word, count] for word, count in counter.most_common(top_n)]
