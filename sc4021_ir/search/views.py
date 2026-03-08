@@ -29,13 +29,14 @@ def search_view(request):
     date_end = request.GET.get("date_end", "").strip()  # YYYY-MM-DD
     sort_by = request.GET.get("sort_by", "relevance").strip()
     page_num = max(1, int(request.GET.get("page", 1)))
+    election_year = request.GET.get("election_year", "").strip()
 
     # Full-text search on the "text" field; fall back to match-all
     solr_query = f"text:({query})" if query else "*:*"
 
     # Filter queries (fq)
     fq = _build_filter_queries(
-        selected_sentiment, selected_party, selected_person, date_start, date_end
+        selected_sentiment, selected_party, selected_person, date_start, date_end, election_year
     )
 
     # Sort
@@ -98,13 +99,14 @@ def search_view(request):
         "total_results": total_results,
         "results": mapped_results,
         "chart_data": json.dumps(chart_data),
+        "election_year": election_year,
     }
 
     return render(request, "search/index.html", context)
 
 
 # Helper: build filter queries list
-def _build_filter_queries(sentiment, party, person, date_start, date_end):
+def _build_filter_queries(sentiment, party, person, date_start, date_end, election_year):
     """Return a list of Solr fq strings based on active filter values."""
     fq = []
 
@@ -122,6 +124,12 @@ def _build_filter_queries(sentiment, party, person, date_start, date_end):
         start = f"{date_start}T00:00:00Z" if date_start else "*"
         end = f"{date_end}T23:59:59Z" if date_end else "*"
         fq.append(f"created_at:[{start} TO {end}]")
+
+    if election_year == "2020":
+        fq.append("created_at:[2020-06-01T00:00:00Z TO 2020-07-31T23:59:59Z]")
+
+    elif election_year == "2025":
+        fq.append("created_at:[2025-04-01T00:00:00Z TO 2025-05-31T23:59:59Z]")
 
     return fq
 

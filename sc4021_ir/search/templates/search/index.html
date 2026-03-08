@@ -160,21 +160,20 @@
                         {% comment %} Election Period {% endcomment %}
                         <div class="filter-section">
                             <h6 class="filter-heading">
-                                <i class="bi bi-check2-square"></i> Election Period
+                                <i class="bi bi-calendar-event"></i> Election Period
                             </h6>
-                            <label class="toggle-label">
-                                <div class="toggle-switch">
-                                    <input type="checkbox" name="election" id="electionToggle" value="1"
-                                        {% if election_period %}checked{% endif %}
-                                        onchange="document.getElementById('searchForm').submit()">
-                                    <span class="toggle-slider"></span>
-                                </div>
-                                <span class="toggle-text">
-                                    {% if election_period %}Showing election-period posts only{% else %}Include all periods{% endif %}
-                                </span>
-                            </label>
+                            <select name="election_year" class="filter-select"
+                                onchange="document.getElementById('searchForm').submit()">
+                                <option value="">All Periods</option>
+                                <option value="2020" {% if election_year == "2020" %}selected{% endif %}>
+                                    GE 2020
+                                </option>
+                                <option value="2025" {% if election_year == "2025" %}selected{% endif %}>
+                                    GE 2025
+                                </option>
+                            </select>
                         </div>
-
+                                                
                         {% comment %} Sort By {% endcomment %}
                         <div class="filter-section">
                             <h6 class="filter-heading">
