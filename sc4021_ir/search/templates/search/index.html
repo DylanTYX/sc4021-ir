@@ -162,17 +162,48 @@
                             <h6 class="filter-heading">
                                 <i class="bi bi-calendar-event"></i> Election Period
                             </h6>
-                            <select name="election_year" class="filter-select"
-                                onchange="document.getElementById('searchForm').submit()">
+                            <!--first dropdown: election year!!-->
+                            <select id="electionYear" name="election_year" class="filter-select"
+                                onchange="showSubDropdown()">
                                 <option value="">All Periods</option>
                                 <option value="2020" {% if election_year == "2020" %}selected{% endif %}>
-                                    GE 2020
+                                    GE 2020 (1/6 - 31/7)
                                 </option>
                                 <option value="2025" {% if election_year == "2025" %}selected{% endif %}>
-                                    GE 2025
+                                    GE 2025 (1/4 - 31/5)
                                 </option>
                             </select>
+                            <!--second dropdown: election year!!-->
+                            <select id="subDates" name="election_dates" class="filter-select" style="display:none;"
+                                onchange="document.getElementById('searchForm').submit()">
+                            </select>
                         </div>
+
+                        <script>
+                        function showSubDropdown() {
+                            const year = document.getElementById('electionYear').value;
+                            const subDropdown = document.getElementById('subDates');
+                            let options = '<option value="">Select Date</option>';
+
+                            if (year === '2020') {
+                                options += `
+                                    <option value="nomination_2020">Nomination Day: 30/6/2020</option>
+                                    <option value="polling_2020">Polling Day: 10/7/2020</option>
+                                `;
+                                subDropdown.style.display = 'inline-block';
+                            } else if (year === '2025') {
+                                options += `
+                                    <option value="nomination_2025">Nomination Day: 23/4/2025</option>
+                                    <option value="polling_2025">Polling Day: 03/5/2025</option>
+                                `;
+                                subDropdown.style.display = 'inline-block';
+                            } else {
+                                subDropdown.style.display = 'none';
+                            }
+
+                            subDropdown.innerHTML = options;
+                        }
+                        </script>
                                                 
                         {% comment %} Sort By {% endcomment %}
                         <div class="filter-section">
