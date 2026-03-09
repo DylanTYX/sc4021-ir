@@ -176,36 +176,12 @@
                                 </option>
                             </select>
                             <!--second dropdown: election year!!-->
-                            <select id="subDates" name="election_dates" class="filter-select" style="display:none;"
+                            <select id="subDates" name="election_dates" class="filter-select"
                                 onchange="document.getElementById('searchForm').submit()">
                             </select>
                         </div>
 
-                        <script>
-                        function showSubDropdown() {
-                            const year = document.getElementById('electionYear').value;
-                            const subDropdown = document.getElementById('subDates');
-                            let options = '<option value="">Select Date</option>';
 
-                            if (year === '2020') {
-                                options += `
-                                    <option value="nomination_2020">Nomination Day: 30/6/2020</option>
-                                    <option value="polling_2020">Polling Day: 10/7/2020</option>
-                                `;
-                                subDropdown.style.display = 'inline-block';
-                            } else if (year === '2025') {
-                                options += `
-                                    <option value="nomination_2025">Nomination Day: 23/4/2025</option>
-                                    <option value="polling_2025">Polling Day: 03/5/2025</option>
-                                `;
-                                subDropdown.style.display = 'inline-block';
-                            } else {
-                                subDropdown.style.display = 'none';
-                            }
-
-                            subDropdown.innerHTML = options;
-                        }
-                        </script>
                                                 
                         {% comment %} Sort By {% endcomment %}
                         <div class="filter-section">
@@ -631,8 +607,8 @@
                 // words = array of [word, weight] pairs
                 WordCloud(document.getElementById('wordCloudContainer'), {
                     list: words,
-                    gridSize: 12,
-                    weightFactor: 5,
+                    gridSize: 14,
+                    weightFactor: 14,
                     fontFamily: 'Inter, sans-serif',
                     color: 'random-dark',
                     rotateRatio: 0.5,
@@ -649,6 +625,36 @@
                 buildWordCloud(wordCloudData);
             }
             
+
+            {% comment %} Election Period sub-dropdown {% endcomment %}
+            function showSubDropdown() {
+                const year = document.getElementById('electionYear').value;
+                const subDropdown = document.getElementById('subDates');
+                let options = '<option value="">Select Date</option>';
+
+                if (year === '2020') {
+                    options += `
+                        <option value="nomination_2020">Nomination Day: 30/6/2020</option>
+                        <option value="polling_2020">Polling Day: 10/7/2020</option>
+                    `;
+                    subDropdown.style.display = 'inline-block';
+                    subDropdown.style.marginTop = '8px';
+                } else if (year === '2025') {
+                    options += `
+                        <option value="nomination_2025">Nomination Day: 23/4/2025</option>
+                        <option value="polling_2025">Polling Day: 03/5/2025</option>
+                    `;
+                    subDropdown.style.display = 'inline-block';
+                    subDropdown.style.marginTop = '8px';
+                } else {
+                    subDropdown.style.display = 'none';
+                }
+
+                subDropdown.innerHTML = options;
+            }
+
+            // Initialise on page load so the dropdown is always in the correct state
+            showSubDropdown();
 
             {% comment %} Clear all filters {% endcomment %}
             function clearAllFilters() {
