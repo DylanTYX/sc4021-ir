@@ -1,6 +1,7 @@
 from django.shortcuts import render
 import pysolr
 import json
+import re
 from collections import defaultdict
 from dateutil import parser
 from collections import Counter
@@ -10,6 +11,195 @@ SOLR_URL = "http://localhost:8983/solr/political_opinions"
 solr = pysolr.Solr(SOLR_URL, always_commit=True)
 
 ROWS_PER_PAGE = 10
+
+WORDCLOUD_STOPWORDS = {
+    "a",
+    "about",
+    "above",
+    "after",
+    "again",
+    "against",
+    "all",
+    "am",
+    "an",
+    "and",
+    "any",
+    "are",
+    "as",
+    "at",
+    "be",
+    "because",
+    "been",
+    "before",
+    "being",
+    "below",
+    "between",
+    "both",
+    "but",
+    "by",
+    "can",
+    "could",
+    "did",
+    "do",
+    "does",
+    "doing",
+    "down",
+    "during",
+    "each",
+    "few",
+    "for",
+    "from",
+    "further",
+    "had",
+    "has",
+    "have",
+    "having",
+    "he",
+    "her",
+    "here",
+    "hers",
+    "herself",
+    "him",
+    "himself",
+    "his",
+    "how",
+    "i",
+    "if",
+    "in",
+    "into",
+    "is",
+    "it",
+    "its",
+    "itself",
+    "just",
+    "me",
+    "more",
+    "most",
+    "my",
+    "myself",
+    "no",
+    "nor",
+    "not",
+    "now",
+    "of",
+    "off",
+    "on",
+    "once",
+    "only",
+    "or",
+    "other",
+    "our",
+    "ours",
+    "ourselves",
+    "out",
+    "over",
+    "own",
+    "same",
+    "she",
+    "should",
+    "so",
+    "some",
+    "such",
+    "than",
+    "that",
+    "the",
+    "their",
+    "theirs",
+    "them",
+    "themselves",
+    "then",
+    "there",
+    "these",
+    "they",
+    "this",
+    "those",
+    "through",
+    "to",
+    "too",
+    "under",
+    "until",
+    "up",
+    "very",
+    "was",
+    "we",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "while",
+    "who",
+    "whom",
+    "why",
+    "will",
+    "with",
+    "you",
+    "your",
+    "yours",
+    "yourself",
+    "yourselves",
+    "also",
+    "still",
+    "really",
+    "much",
+    "many",
+    "one",
+    "two",
+    "three",
+    "would",
+    "may",
+    "might",
+    "must",
+    "shall",
+    "yet",
+    "ever",
+    "never",
+    "yes",
+    "nope",
+    "okay",
+    "ok",
+    "im",
+    "ive",
+    "id",
+    "ill",
+    "dont",
+    "didnt",
+    "doesnt",
+    "cant",
+    "couldnt",
+    "wont",
+    "wouldnt",
+    "isnt",
+    "arent",
+    "wasnt",
+    "werent",
+    "hasnt",
+    "havent",
+    "hadnt",
+    "shouldnt",
+    "youre",
+    "theyre",
+    "were",
+    "weve",
+    "theyve",
+    "thats",
+    "theres",
+    "whats",
+    "lets",
+    "amp",
+    "http",
+    "https",
+    "www",
+    "com",
+    "co",
+    "org",
+    "net",
+    "reddit",
+    "rt",
+    "via",
+}
+
+WORD_PATTERN = re.compile(r"[a-z][a-z']+")
 
 # Maps sort_by request parameter → Solr sort expression
 SORT_OPTIONS = {
@@ -37,7 +227,12 @@ def search_view(request):
 
     # Filter queries (fq)
     fq = _build_filter_queries(
-        selected_sentiment, selected_party, selected_person, date_start, date_end, election_year
+        selected_sentiment,
+        selected_party,
+        selected_person,
+        date_start,
+        date_end,
+        election_year,
     )
 
     # Sort
@@ -111,7 +306,9 @@ def search_view(request):
 
 
 # Helper: build filter queries list
-def _build_filter_queries(sentiment, party, person, date_start, date_end, election_year):
+def _build_filter_queries(
+    sentiment, party, person, date_start, date_end, election_year
+):
     """Return a list of Solr fq strings based on active filter values."""
     fq = []
 
@@ -178,18 +375,23 @@ def get_sentiment_distribution(solr_query, fq):
     except Exception:
         return {"labels": [], "positive": [], "neutral": [], "negative": []}
 
+
 # Helper: pre-processing of data for word cloud generation
 def get_wordcloud_data(solr_query, fq, top_n=50):
-    #get up to 1000 docs
+    # Pull up to 1000 matching docs to build the word cloud corpus.
     results = solr.search(solr_query, rows=1000, fl="text", fq=fq)
 
-    #concatenate all text
-    all_text = " ".join([doc.get("text", "") for doc in results])
+    all_text = " ".join(doc.get("text", "") for doc in results).lower()
 
-    #basic word filtering
-    stopwords = {"the", "its", "still", "with", "but", "and", "is", "to", "of", "in", "a", "for", "on"}  # you can expand
-    words = [w for w in all_text.split() if w.lower() not in stopwords]
+    # Tokenize with regex to avoid punctuation/URL fragments, then remove stopwords.
+    words = []
+    for token in WORD_PATTERN.findall(all_text):
+        normalized = token.strip("'")
+        if len(normalized) <= 1:
+            continue
+        if normalized in WORDCLOUD_STOPWORDS:
+            continue
+        words.append(normalized)
 
-    #bount word frequencies
     counter = Counter(words)
     return [[word, count] for word, count in counter.most_common(top_n)]
