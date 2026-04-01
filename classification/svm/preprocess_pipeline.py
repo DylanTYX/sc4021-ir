@@ -1,8 +1,25 @@
 """
-Reusable text preprocessing pipeline for Singapore political Reddit data.
+Reusable preprocessing pipeline for Singapore political Reddit text.
 
-This module centralizes the preprocessing logic so multiple notebooks/scripts
-can share exactly the same behavior.
+Pipeline order:
+1. Microtext normalization
+    - Remove URLs/@mentions and lowercase text.
+2. Alias and entity canonicalization (rule-based)
+    - Expand slang (e.g., sgp -> singapore) and map party/person aliases to entity tokens.
+3. Phrase chunk normalization
+    - Collapse configured multi-word phrases into single underscore tokens.
+4. Tokenization
+    - Split text into words, entity tokens, numbers, and punctuation.
+5. Filler/noise removal
+    - Drop configured filler particles (e.g., lah, lor, leh).
+6. Case normalization at token level
+    - Lowercase non-entity tokens.
+7. Context extraction via negation scope
+    - Convert negation cues to "not" and carry short-scope negation context.
+8. Entity restoration
+    - Convert internal entity tokens back to readable canonical names.
+9. Surface-form cleanup
+    - Detokenize and normalize spacing around punctuation.
 """
 
 from __future__ import annotations
