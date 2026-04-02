@@ -272,6 +272,9 @@
                                 <span class="chart-card-title">Sentiment Trend Over Time</span>
                                 <i class="bi bi-graph-up-arrow chart-icon"></i>
                             </div>
+                            {% if trend_insight %}
+                            <p class="chart-insight">{{ trend_insight }}</p>
+                            {% endif %}
                             <div class="chart-wrap">
                                 <canvas id="lineChart"></canvas>
                             </div>
@@ -539,10 +542,18 @@
             {% comment %} LINE CHART — Sentiment Trend {% endcomment %}
             (function buildLine() {
                 // placeholder monthly labels — replace with real backend data
-                const trendLabels   = chartData.trend_labels   || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                const trendPositive = chartData.trend_positive || trendLabels.map(() => 0);
-                const trendNeutral  = chartData.trend_neutral  || trendLabels.map(() => 0);
-                const trendNegative = chartData.trend_negative || trendLabels.map(() => 0);
+                const trendLabels = (chartData.trend_labels && chartData.trend_labels.length)
+                    ? chartData.trend_labels
+                    : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+                const trendPositive = (chartData.trend_positive && chartData.trend_positive.length)
+                    ? chartData.trend_positive
+                    : trendLabels.map(() => 0);
+                const trendNeutral = (chartData.trend_neutral && chartData.trend_neutral.length)
+                    ? chartData.trend_neutral
+                    : trendLabels.map(() => 0);
+                const trendNegative = (chartData.trend_negative && chartData.trend_negative.length)
+                    ? chartData.trend_negative
+                    : trendLabels.map(() => 0);
 
                 const ctx = document.getElementById('lineChart').getContext('2d');
                 new Chart(ctx, {

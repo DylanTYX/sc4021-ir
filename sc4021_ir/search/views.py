@@ -3,6 +3,7 @@ import pysolr
 import json
 import re
 from collections import defaultdict
+from calendar import month_abbr
 from dateutil import parser
 from collections import Counter
 
@@ -280,6 +281,8 @@ def search_view(request):
 
     # Chart data
     chart_data = get_sentiment_distribution(solr_query, fq)
+    trend_data = get_sentiment_trend(solr_query, fq)
+    chart_data.update(trend_data)
 
     # Word cloud data
     wordcloud_data = get_wordcloud_data(solr_query, fq)
@@ -300,6 +303,7 @@ def search_view(request):
         "chart_data": json.dumps(chart_data),
         "wordcloud_data": json.dumps(wordcloud_data),
         "election_year": election_year,
+        "trend_insight": chart_data.get("trend_insight", ""),
     }
 
     return render(request, "search/index.html", context)
@@ -374,6 +378,86 @@ def get_sentiment_distribution(solr_query, fq):
 
     except Exception:
         return {"labels": [], "positive": [], "neutral": [], "negative": []}
+
+
+# Helper: sentiment trend over time for Chart.js
+def get_sentiment_trend(solr_query, fq):
+    """Return monthly sentiment counts and a short insight string."""
+    try:
+        results = solr.search(solr_query, rows=1000, fl="created_at,sentiment", fq=fq)
+
+        monthly_counts = defaultdict(
+            lambda: {"positive": 0, "neutral": 0, "negative": 0}
+        )
+
+        for doc in results:
+            raw_date = doc.get("created_at")
+            sentiment = (doc.get("sentiment") or "").lower()
+            if not raw_date or sentiment not in {"positive", "neutral", "negative"}:
+                continue
+
+            parsed_date = parser.parse(raw_date)
+            bucket_key = (parsed_date.year, parsed_date.month)
+            monthly_counts[bucket_key][sentiment] += 1
+
+        if not monthly_counts:
+            return {
+                "trend_labels": [],
+                "trend_positive": [],
+                "trend_neutral": [],
+                "trend_negative": [],
+                "trend_insight": "No dated documents are available yet, so the trend chart has nothing to plot.",
+            }
+
+        sorted_buckets = sorted(monthly_counts.keys())
+        labels = [f"{month_abbr[month]} {year}" for year, month in sorted_buckets]
+        trend_positive = [
+            monthly_counts[bucket]["positive"] for bucket in sorted_buckets
+        ]
+        trend_neutral = [monthly_counts[bucket]["neutral"] for bucket in sorted_buckets]
+        trend_negative = [
+            monthly_counts[bucket]["negative"] for bucket in sorted_buckets
+        ]
+
+        totals_by_bucket = [
+            trend_positive[i] + trend_neutral[i] + trend_negative[i]
+            for i in range(len(labels))
+        ]
+        dominant_idx = max(
+            range(len(totals_by_bucket)), key=totals_by_bucket.__getitem__
+        )
+
+        dominant_label = labels[dominant_idx]
+        dominant_total = totals_by_bucket[dominant_idx]
+
+        positive_total = sum(trend_positive)
+        neutral_total = sum(trend_neutral)
+        negative_total = sum(trend_negative)
+        overall_sentiments = {
+            "positive": positive_total,
+            "neutral": neutral_total,
+            "negative": negative_total,
+        }
+        overall_dominant = max(overall_sentiments, key=overall_sentiments.get)
+
+        insight = f"{dominant_label} had the highest activity ({dominant_total} posts), and overall sentiment is most {overall_dominant}."
+
+        return {
+            "trend_labels": labels,
+            "trend_positive": trend_positive,
+            "trend_neutral": trend_neutral,
+            "trend_negative": trend_negative,
+            "trend_insight": insight,
+        }
+
+    except Exception:
+        return {
+            "trend_labels": [],
+            "trend_positive": [],
+            "trend_neutral": [],
+            "trend_negative": [],
+            "trend_insight": "Trend data could not be generated for the current filters.",
+        }
 
 
 # Helper: pre-processing of data for word cloud generation
