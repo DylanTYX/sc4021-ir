@@ -307,9 +307,9 @@
                                 {% comment %} Sentiment badge {% endcomment %}
                                 <div class="comment-header">
                                     <span class="sentiment-badge sentiment-{{ result.sentiment|lower }}">
-                                        {% if result.sentiment == 'positive' %}
+                                        {% if result.sentiment|lower == 'positive' %}
                                             <i class="bi bi-emoji-smile-fill"></i> Positive
-                                        {% elif result.sentiment == 'negative' %}
+                                        {% elif result.sentiment|lower == 'negative' %}
                                             <i class="bi bi-emoji-frown-fill"></i> Negative
                                         {% else %}
                                             <i class="bi bi-emoji-neutral-fill"></i> Neutral
@@ -323,7 +323,7 @@
                                         {% endif %}
                                         <span class="comment-date">
                                             <i class="bi bi-clock"></i>
-                                            {{ result.timestamp|date:"d M Y" }}
+                                            {{ result.created_at|date:"d M Y" }}
                                         </span>
                                     </div>
                                 </div>
@@ -335,17 +335,11 @@
                                 <div class="tags-row">
                                     {% comment %} Party tags {% endcomment %}
                                     {% if result.party %}
-                                        {% if result.party|length > 1 %}
-                                            {% for p in result.party %}
-                                            <span class="tag tag-party">
-                                                <i class="bi bi-flag-fill"></i> {{ p }}
-                                            </span>
-                                            {% endfor %}
-                                        {% else %}
-                                            <span class="tag tag-party">
-                                                <i class="bi bi-flag-fill"></i> {{ result.party }}
-                                            </span>
-                                        {% endif %}
+                                        {% for p in result.party %}
+                                        <span class="tag tag-party">
+                                            <i class="bi bi-flag-fill"></i> {{ p }}
+                                        </span>
+                                        {% endfor %}
                                     {% endif %}
 
                                     {% comment %} Person tags {% endcomment %}
@@ -460,9 +454,9 @@
 
             {% comment %} PIE CHART — Sentiment Distribution {% endcomment %}
             (function buildPie() {
-                const totPos = (chartData.positive || []).reduce((a, b) => a + b, 0);
-                const totNeu = (chartData.neutral  || []).reduce((a, b) => a + b, 0);
-                const totNeg = (chartData.negative || []).reduce((a, b) => a + b, 0);
+                const totPos = (chartData.total_positive || 0);
+                const totNeu = (chartData.total_neutral  || 0);
+                const totNeg = (chartData.total_negative || 0);
 
                 const ctx = document.getElementById('pieChart').getContext('2d');
                 new Chart(ctx, {
@@ -614,23 +608,25 @@
 
             {% comment %} Word Cloud — Sentiment Cloud {% endcomment %}
             function buildWordCloud(words) 
-            {
+            {   
                 // words = array of [word, weight] pairs
                 WordCloud(document.getElementById('wordCloudContainer'), {
                     list: words,
-                    gridSize: 14,
-                    weightFactor: 14,
+                    gridSize: 8,
+                    weightFactor: function(size) {return Math.log2(size)*5},
                     fontFamily: 'Inter, sans-serif',
                     color: 'random-dark',
-                    rotateRatio: 0.5,
+                    rotateRatio: 0.3,
                     backgroundColor: '#ffffff',
-                    drawOutOfBound: false
+                    drawOutOfBound: false,
+                    shrinkToFit: true,
+                    minSize: 8,
                 });
             }
 
             const wordCloudData = {{ wordcloud_data|safe }};
             
-            //only render if data exists
+            // only render if data exists
             if (wordCloudData && wordCloudData.length > 0) 
             {
                 buildWordCloud(wordCloudData);

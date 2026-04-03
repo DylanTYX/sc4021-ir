@@ -245,7 +245,7 @@ def search_view(request):
     # Execute search
     try:
         search_kwargs = {
-            "fl": "id,text,sentiment,sentiment_score,party,person,created_at,upvotes",
+            "fl": "text,clean_text,sentiment,sentiment_score,party,person,aspect,created_at,id,upvotes",
             "sort": sort,
         }
         if fq:
@@ -265,16 +265,23 @@ def search_view(request):
         raw_date = doc.get("created_at")
         mapped_results.append(
             {
-                "id": doc.get("id", ""),
                 "text": doc.get("text", ""),
+                "clean_text": doc.get("clean_text", ""),
                 "sentiment": doc.get("sentiment", ""),
                 "sentiment_score": doc.get("sentiment_score"),
                 "party": doc.get("party", []),
                 "person": doc.get("person", []),
+                "aspect": doc.get("aspect", []),
                 "created_at": parser.parse(raw_date) if raw_date else None,
+                "id": doc.get("id", ""),
                 "upvotes": doc.get("upvotes", 0),
             }
         )
+    
+    for doc in results:
+        raw_date = doc.get("created_at")
+        print("RAW DATE:", raw_date)  # temporary
+        break
 
     total_results = results.hits
     total_pages = max(1, (total_results + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
@@ -317,7 +324,7 @@ def _build_filter_queries(
     fq = []
 
     if sentiment:
-        fq.append(f"sentiment:{sentiment}")
+        fq.append(f"sentiment:{sentiment.capitalize()}")
 
     if party:
         # Quote multi-word values
@@ -347,29 +354,42 @@ def get_sentiment_distribution(solr_query, fq):
         search_kwargs = {
             "rows": 0,
             "facet": "on",
-            "facet.pivot": "party,sentiment",
+            "facet.field": "sentiment",         # pie chart
+            "facet.pivot": "party,sentiment",   # bar graph
             "facet.mincount": 1,
         }
         if fq:
             search_kwargs["fq"] = fq
 
         facet_results = solr.search(solr_query, **search_kwargs)
+        facet_counts = facet_results.raw_response.get("facet_counts", {})
 
+        # For pie chart (sentiment only)
+        sentiment_field = facet_counts.get("facet_fields", {}).get("sentiment", [])
+        total_sent = {"positive": 0, "neutral": 0, "negative": 0}
+        it = iter(sentiment_field)
+        for val, count in zip(it, it):
+            total_sent[val.lower()] = count
+
+        # For bar graph (party and sentiment)
         parties_data = defaultdict(lambda: {"positive": 0, "neutral": 0, "negative": 0})
-
-        pivot = facet_results.raw_response.get("facet_counts", {}).get(
-            "facet_pivot", {}
-        )
+        pivot = facet_counts.get("facet_pivot", {})
 
         for party_item in pivot.get("party,sentiment", []):
             party_name = party_item["value"]
             for sentiment_item in party_item.get("pivot", []):
-                parties_data[party_name][sentiment_item["value"]] = sentiment_item[
+                parties_data[party_name][sentiment_item["value"].lower()] = sentiment_item[
                     "count"
                 ]
 
         sorted_parties = sorted(parties_data.keys())
         return {
+            # For pie chart
+            "total_positive": total_sent["positive"],
+            "total_neutral": total_sent["neutral"],
+            "total_negative": total_sent["negative"],
+
+            # For bar graph
             "labels": sorted_parties,
             "positive": [parties_data[p]["positive"] for p in sorted_parties],
             "neutral": [parties_data[p]["neutral"] for p in sorted_parties],
@@ -479,3 +499,4 @@ def get_wordcloud_data(solr_query, fq, top_n=50):
 
     counter = Counter(words)
     return [[word, count] for word, count in counter.most_common(top_n)]
+
