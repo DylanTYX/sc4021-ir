@@ -277,11 +277,6 @@ def search_view(request):
                 "upvotes": doc.get("upvotes", 0),
             }
         )
-    
-    for doc in results:
-        raw_date = doc.get("created_at")
-        print("RAW DATE:", raw_date)  # temporary
-        break
 
     total_results = results.hits
     total_pages = max(1, (total_results + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE)
