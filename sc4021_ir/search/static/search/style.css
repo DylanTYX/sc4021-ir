@@ -574,6 +574,12 @@ body {
   color: var(--navy);
   letter-spacing: -0.01em;
 }
+.chart-insight {
+  margin: 0 0 14px;
+  font-size: 0.92rem;
+  color: var(--grey-deep);
+  line-height: 1.5;
+}
 .chart-icon {
   font-size: 15px;
   color: var(--grey-mid);
