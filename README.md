@@ -64,10 +64,10 @@ docker compose up -d
 
 This spins up a Solr container and **automatically creates the `political_opinions` core** using the schema checked into the repo (`solr/configsets/`). Everyone on the team gets the exact same schema — no manual setup needed.
 
-> First time only — seed the core with mock data:
+> First time only — seed the core with data:
 >
 > ```bash
-> python sc4021_ir/sc4021_ir/mock_data/index_mock_data.py
+> python data/cleaned/index_data.py
 > ```
 
 ### 5. Set up environment variables (optional)
