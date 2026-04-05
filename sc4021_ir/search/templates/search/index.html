@@ -116,11 +116,9 @@
                             <select name="party" id="partySelect" class="filter-select"
                                     onchange="document.getElementById('searchForm').submit()">
                                 <option value="">All Parties</option>
-                                <option value="Workers' Party"           {% if selected_party == "Workers' Party" %}selected{% endif %}>Workers' Party (WP)</option>
-                                <option value="People's Action Party"    {% if selected_party == "People's Action Party" %}selected{% endif %}>People's Action Party (PAP)</option>
-                                <option value="Progress Singapore Party" {% if selected_party == 'Progress Singapore Party' %}selected{% endif %}>Progress Singapore Party (PSP)</option>
-                                <option value="Singapore Democratic Party" {% if selected_party == 'Singapore Democratic Party' %}selected{% endif %}>Singapore Democratic Party (SDP)</option>
-                                <option value="People's Power Party"     {% if selected_party == "People's Power Party" %}selected{% endif %}>People's Power Party (PPP)</option>
+                                {% for option in party_options %}
+                                <option value="{{ option.value }}" {% if selected_party == option.value %}selected{% endif %}>{{ option.label }}</option>
+                                {% endfor %}
                             </select>
                         </div>
 
@@ -503,7 +501,13 @@
                 // placeholder parties if labels are empty
                 const labels = (chartData.labels && chartData.labels.length)
                     ? chartData.labels
-                    : ['WP', 'PAP', 'PSP', 'SDP', 'PPP'];
+                    : [
+                        "Workers' Party (WP)",
+                        "People's Action Party (PAP)",
+                        'Progress Singapore Party (PSP)',
+                        'Singapore Democratic Party (SDP)',
+                        "People's Power Party (PPP)"
+                    ];
 
                 const positive = chartData.positive || labels.map(() => 0);
                 const neutral  = chartData.neutral  || labels.map(() => 0);

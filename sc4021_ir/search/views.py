@@ -210,6 +210,39 @@ SORT_OPTIONS = {
     "upvotes": "upvotes desc",
 }
 
+PARTY_OPTIONS = [
+    {"value": "Workers Party", "label": "Workers' Party (WP)"},
+    {"value": "Peoples Action Party", "label": "People's Action Party (PAP)"},
+    {"value": "Progress Singapore Party", "label": "Progress Singapore Party (PSP)"},
+    {
+        "value": "Singapore Democratic Party",
+        "label": "Singapore Democratic Party (SDP)",
+    },
+    {"value": "People's Power Party", "label": "People's Power Party (PPP)"},
+]
+
+PARTY_VALUE_ALIASES = {
+    "Workers' Party": "Workers Party",
+    "Workers Party": "Workers Party",
+    "People's Action Party": "Peoples Action Party",
+    "Peoples Action Party": "Peoples Action Party",
+    "People's Power Party": "People's Power Party",
+    "Peoples Power Party": "People's Power Party",
+    "Progress Singapore Party": "Progress Singapore Party",
+    "Singapore Democratic Party": "Singapore Democratic Party",
+}
+
+PARTY_LABEL_BY_VALUE = {option["value"]: option["label"] for option in PARTY_OPTIONS}
+
+
+def normalize_party_value(party_value):
+    return PARTY_VALUE_ALIASES.get(party_value, party_value)
+
+
+def format_party_label(party_value):
+    normalized_value = normalize_party_value(party_value)
+    return PARTY_LABEL_BY_VALUE.get(normalized_value, normalized_value)
+
 
 # Main search view
 def search_view(request):
@@ -222,6 +255,7 @@ def search_view(request):
     sort_by = request.GET.get("sort_by", "relevance").strip()
     page_num = max(1, int(request.GET.get("page", 1)))
     election_year = request.GET.get("election_year", "").strip()
+    selected_party = normalize_party_value(selected_party)
 
     # Full-text search on the "text" field; fall back to match-all
     solr_query = f"text:({query})" if query else "*:*"
@@ -269,7 +303,7 @@ def search_view(request):
                 "clean_text": doc.get("clean_text", ""),
                 "sentiment": doc.get("sentiment", ""),
                 "sentiment_score": doc.get("sentiment_score"),
-                "party": doc.get("party", []),
+                "party": [format_party_label(party) for party in doc.get("party", [])],
                 "person": doc.get("person", []),
                 "aspect": doc.get("aspect", []),
                 "created_at": parser.parse(raw_date) if raw_date else None,
@@ -307,6 +341,7 @@ def search_view(request):
         "election_year": election_year,
         "trend_insight": chart_data.get("trend_insight", ""),
         "trend_insights": chart_data.get("trend_insights", []),
+        "party_options": PARTY_OPTIONS,
     }
 
     return render(request, "search/index.html", context)
@@ -372,7 +407,7 @@ def get_sentiment_distribution(solr_query, fq):
         pivot = facet_counts.get("facet_pivot", {})
 
         for party_item in pivot.get("party,sentiment", []):
-            party_name = party_item["value"]
+            party_name = format_party_label(party_item["value"])
             for sentiment_item in party_item.get("pivot", []):
                 parties_data[party_name][sentiment_item["value"].lower()] = (
                     sentiment_item["count"]
@@ -399,13 +434,11 @@ def get_sentiment_distribution(solr_query, fq):
 def get_sentiment_trend(solr_query, fq):
     """Return monthly sentiment counts and a short insight string."""
     try:
-        results = solr.search(solr_query, rows=1000, fl="created_at,sentiment", fq=fq)
-
         monthly_counts = defaultdict(
             lambda: {"positive": 0, "neutral": 0, "negative": 0}
         )
 
-        for doc in results:
+        for doc in _fetch_all_solr_docs(solr_query, fq, fl="created_at,sentiment"):
             raw_date = doc.get("created_at")
             sentiment = (doc.get("sentiment") or "").lower()
             if not raw_date or sentiment not in {"positive", "neutral", "negative"}:
@@ -520,10 +553,10 @@ def get_sentiment_trend(solr_query, fq):
 
 # Helper: pre-processing of data for word cloud generation
 def get_wordcloud_data(solr_query, fq, top_n=50):
-    # Pull up to 1000 matching docs to build the word cloud corpus.
-    results = solr.search(solr_query, rows=1000, fl="text", fq=fq)
-
-    all_text = " ".join(doc.get("text", "") for doc in results).lower()
+    # Pull all matching docs to build the word cloud corpus.
+    all_text = " ".join(
+        doc.get("text", "") for doc in _fetch_all_solr_docs(solr_query, fq, fl="text")
+    ).lower()
 
     # Tokenize with regex to avoid punctuation/URL fragments, then remove stopwords.
     words = []
@@ -537,3 +570,25 @@ def get_wordcloud_data(solr_query, fq, top_n=50):
 
     counter = Counter(words)
     return [[word, count] for word, count in counter.most_common(top_n)]
+
+
+# Helper: generator to fetch all matching Solr documents in batches to avoid memory issues
+def _fetch_all_solr_docs(solr_query, fq, fl, batch_size=1000):
+    """Yield all Solr documents for a query in fixed-size batches."""
+    start = 0
+
+    while True:
+        search_kwargs = {"rows": batch_size, "start": start, "fl": fl}
+        if fq:
+            search_kwargs["fq"] = fq
+
+        results = solr.search(solr_query, **search_kwargs)
+        if not results:
+            break
+
+        for doc in results:
+            yield doc
+
+        start += batch_size
+        if len(results) < batch_size:
+            break
