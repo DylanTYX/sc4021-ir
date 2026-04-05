@@ -44,7 +44,7 @@
                     <input type="hidden" name="person"     id="hidPerson"     value="{{ selected_person }}">
                     <input type="hidden" name="date_start" id="hidDateStart"  value="{{ date_start }}">
                     <input type="hidden" name="date_end"   id="hidDateEnd"    value="{{ date_end }}">
-                    <input type="hidden" name="election"   id="hidElection"   value="{{ election_period }}">
+                    <input type="hidden" name="election_year" id="hidElection" value="{{ election_year }}">
                     <input type="hidden" name="sort_by"    id="hidSort"       value="{{ sort_by }}">
                     <button type="submit" class="topnav-search-btn">
                         <i class="bi bi-search"></i>
@@ -164,7 +164,7 @@
                             </h6>
                             <!--first dropdown: election year!!-->
                             <select id="electionYear" name="election_year" class="filter-select"
-                                onchange="showSubDropdown()">
+                                onchange="showSubDropdown(); document.getElementById('searchForm').submit()">
                                 <option value="">All Periods</option>
                                 <option value="2020" {% if election_year == "2020" %}selected{% endif %}>
                                     GE 2020 (1/6 - 31/7)
@@ -175,7 +175,7 @@
                             </select>
                             <!--second dropdown: election year!!-->
                             <select id="subDates" name="election_dates" class="filter-select"
-                                onchange="document.getElementById('searchForm').submit()">
+                                onchange="applyElectionPreset()">
                             </select>
                         </div>
 
@@ -669,6 +669,28 @@
                 }
 
                 subDropdown.innerHTML = options;
+                subDropdown.value = '';
+            }
+
+            function applyElectionPreset() {
+                const year = document.getElementById('electionYear').value;
+                const preset = document.getElementById('subDates').value;
+                const dateStart = document.getElementById('dateStart');
+                const dateEnd = document.getElementById('dateEnd');
+
+                const presets = {
+                    nomination_2020: ['2020-06-30', '2020-06-30'],
+                    polling_2020: ['2020-07-10', '2020-07-10'],
+                    nomination_2025: ['2025-04-23', '2025-04-23'],
+                    polling_2025: ['2025-05-03', '2025-05-03'],
+                };
+
+                if (year && presets[preset]) {
+                    dateStart.value = presets[preset][0];
+                    dateEnd.value = presets[preset][1];
+                }
+
+                document.getElementById('searchForm').submit();
             }
 
             // Initialise on page load so the dropdown is always in the correct state
@@ -689,7 +711,7 @@
                 document.getElementById('hidPerson').value = document.getElementById('personSelect')?.value || '';
                 document.getElementById('hidDateStart').value = document.getElementById('dateStart')?.value || '';
                 document.getElementById('hidDateEnd').value = document.getElementById('dateEnd')?.value || '';
-                document.getElementById('hidElection').value = document.getElementById('electionToggle')?.checked ? '1' : '';
+                document.getElementById('hidElection').value = document.getElementById('electionYear')?.value || '';
                 document.getElementById('hidSort').value = document.getElementById('sortSelect')?.value || '';
             });
         </script>
