@@ -62,13 +62,15 @@ pip install -r requirements.txt
 docker compose up -d
 ```
 
-This spins up a Solr container and **automatically creates the `political_opinions` core** using the schema checked into the repo (`solr/configsets/`). Everyone on the team gets the exact same schema — no manual setup needed.
+This spins up a Solr container and **automatically creates the `political_opinions` core** using the schema checked into the repo (`solr/configsets/`). Everyone on the team gets the exact same schema, so there is no manual Solr core setup.
 
-> First time only — seed the core with mock data:
+> First time only — seed the core with data:
 >
 > ```bash
-> python sc4021_ir/sc4021_ir/mock_data/index_mock_data.py
+> python data/cleaned/index_data.py
 > ```
+
+This script loads the cleaned inference dataset from `data/cleaned/singapore_wp_comments_display_inference_id.json`, converts the dates into Solr's expected format, and sends the documents to the `political_opinions` core.
 
 ### 5. Set up environment variables (optional)
 
@@ -97,7 +99,7 @@ Think of `docker compose` like a power strip for the app:
 | `docker compose down`    | Stop Solr (your indexed data is **kept**) |
 | `docker compose down -v` | Stop Solr **and wipe all indexed data**   |
 
-> After a `down -v` (full reset), re-run `index_mock_data.py` to reseed.
+> After a `down -v` (full reset), re-run `data/cleaned/index_data.py` to reseed.
 
 Your indexed documents are stored in a Docker **named volume** (`solr_data`), so they survive normal `down`/`up` restarts. Only `-v` deletes them.
 
@@ -105,25 +107,41 @@ Your indexed documents are stored in a Docker **named volume** (`solr_data`), so
 
 ```
 sc4021-ir/
-├── docker-compose.yaml         # Solr container config
-├── solr/
-│   └── configsets/
-│       └── political_opinions/
-│           └── conf/
-│               ├── schema.xml      # Solr field definitions (version-controlled)
-│               └── solrconfig.xml  # Solr request handlers
-├── sc4021_ir/                  # Django project root
+├── classification/                  # NLP pipelines and model notebooks
+│   ├── ELECTRA/
+│   └── svm/
+├── data/                            # Raw and cleaned datasets
+│   ├── raw/
+│   └── cleaned/
+│       ├── data_annotation_clean.csv
+│       ├── index_data.py            # Seeds Solr with cleaned inference data
+│       ├── singapore_wp_comments_display_inference.csv
+│       ├── singapore_wp_comments_display_inference.json
+│       └── singapore_wp_comments_display_inference_id.json
+├── docker-compose.yaml              # Solr container config
+├── requirements.txt
+├── sc4021_ir/                       # Django project root
+│   ├── db.sqlite3
 │   ├── manage.py
 │   ├── sc4021_ir/
 │   │   ├── settings.py
 │   │   ├── urls.py
-│   │   └── mock_data/          # Mock documents + indexing script
-│   └── search/                 # Search app
+│   │   └── mock_data/               # Legacy mock data utilities
+│   └── search/
 │       ├── views.py
 │       ├── urls.py
-│       ├── static/             # CSS
-│       └── templates/          # HTML templates
-├── requirements.txt
+│       ├── static/
+│       │   └── search/
+│       │       └── style.css
+│       └── templates/
+│           └── search/
+│               └── index.html
+├── solr/
+│   └── configsets/
+│       └── political_opinions/
+│           └── conf/
+│               ├── schema.xml
+│               └── solrconfig.xml
 └── README.md
 ```
 

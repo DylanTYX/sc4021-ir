@@ -210,6 +210,39 @@ SORT_OPTIONS = {
     "upvotes": "upvotes desc",
 }
 
+PARTY_OPTIONS = [
+    {"value": "Workers Party", "label": "Workers' Party (WP)"},
+    {"value": "Peoples Action Party", "label": "People's Action Party (PAP)"},
+    {"value": "Progress Singapore Party", "label": "Progress Singapore Party (PSP)"},
+    {
+        "value": "Singapore Democratic Party",
+        "label": "Singapore Democratic Party (SDP)",
+    },
+    {"value": "People's Power Party", "label": "People's Power Party (PPP)"},
+]
+
+PARTY_VALUE_ALIASES = {
+    "Workers' Party": "Workers Party",
+    "Workers Party": "Workers Party",
+    "People's Action Party": "Peoples Action Party",
+    "Peoples Action Party": "Peoples Action Party",
+    "People's Power Party": "People's Power Party",
+    "Peoples Power Party": "People's Power Party",
+    "Progress Singapore Party": "Progress Singapore Party",
+    "Singapore Democratic Party": "Singapore Democratic Party",
+}
+
+PARTY_LABEL_BY_VALUE = {option["value"]: option["label"] for option in PARTY_OPTIONS}
+
+
+def normalize_party_value(party_value):
+    return PARTY_VALUE_ALIASES.get(party_value, party_value)
+
+
+def format_party_label(party_value):
+    normalized_value = normalize_party_value(party_value)
+    return PARTY_LABEL_BY_VALUE.get(normalized_value, normalized_value)
+
 
 # Main search view
 def search_view(request):
@@ -222,6 +255,7 @@ def search_view(request):
     sort_by = request.GET.get("sort_by", "relevance").strip()
     page_num = max(1, int(request.GET.get("page", 1)))
     election_year = request.GET.get("election_year", "").strip()
+    selected_party = normalize_party_value(selected_party)
 
     # Full-text search on the "text" field; fall back to match-all
     solr_query = f"text:({query})" if query else "*:*"
@@ -269,7 +303,7 @@ def search_view(request):
                 "clean_text": doc.get("clean_text", ""),
                 "sentiment": doc.get("sentiment", ""),
                 "sentiment_score": doc.get("sentiment_score"),
-                "party": doc.get("party", []),
+                "party": [format_party_label(party) for party in doc.get("party", [])],
                 "person": doc.get("person", []),
                 "aspect": doc.get("aspect", []),
                 "created_at": parser.parse(raw_date) if raw_date else None,
@@ -306,6 +340,8 @@ def search_view(request):
         "wordcloud_data": json.dumps(wordcloud_data),
         "election_year": election_year,
         "trend_insight": chart_data.get("trend_insight", ""),
+        "trend_insights": chart_data.get("trend_insights", []),
+        "party_options": PARTY_OPTIONS,
     }
 
     return render(request, "search/index.html", context)
@@ -349,8 +385,8 @@ def get_sentiment_distribution(solr_query, fq):
         search_kwargs = {
             "rows": 0,
             "facet": "on",
-            "facet.field": "sentiment",         # pie chart
-            "facet.pivot": "party,sentiment",   # bar graph
+            "facet.field": "sentiment",  # pie chart
+            "facet.pivot": "party,sentiment",  # bar graph
             "facet.mincount": 1,
         }
         if fq:
@@ -371,11 +407,11 @@ def get_sentiment_distribution(solr_query, fq):
         pivot = facet_counts.get("facet_pivot", {})
 
         for party_item in pivot.get("party,sentiment", []):
-            party_name = party_item["value"]
+            party_name = format_party_label(party_item["value"])
             for sentiment_item in party_item.get("pivot", []):
-                parties_data[party_name][sentiment_item["value"].lower()] = sentiment_item[
-                    "count"
-                ]
+                parties_data[party_name][sentiment_item["value"].lower()] = (
+                    sentiment_item["count"]
+                )
 
         sorted_parties = sorted(parties_data.keys())
         return {
@@ -383,7 +419,6 @@ def get_sentiment_distribution(solr_query, fq):
             "total_positive": total_sent["positive"],
             "total_neutral": total_sent["neutral"],
             "total_negative": total_sent["negative"],
-
             # For bar graph
             "labels": sorted_parties,
             "positive": [parties_data[p]["positive"] for p in sorted_parties],
@@ -399,13 +434,11 @@ def get_sentiment_distribution(solr_query, fq):
 def get_sentiment_trend(solr_query, fq):
     """Return monthly sentiment counts and a short insight string."""
     try:
-        results = solr.search(solr_query, rows=1000, fl="created_at,sentiment", fq=fq)
-
         monthly_counts = defaultdict(
             lambda: {"positive": 0, "neutral": 0, "negative": 0}
         )
 
-        for doc in results:
+        for doc in _fetch_all_solr_docs(solr_query, fq, fl="created_at,sentiment"):
             raw_date = doc.get("created_at")
             sentiment = (doc.get("sentiment") or "").lower()
             if not raw_date or sentiment not in {"positive", "neutral", "negative"}:
@@ -422,6 +455,7 @@ def get_sentiment_trend(solr_query, fq):
                 "trend_neutral": [],
                 "trend_negative": [],
                 "trend_insight": "No dated documents are available yet, so the trend chart has nothing to plot.",
+                "trend_insights": [],
             }
 
         sorted_buckets = sorted(monthly_counts.keys())
@@ -455,7 +489,47 @@ def get_sentiment_trend(solr_query, fq):
         }
         overall_dominant = max(overall_sentiments, key=overall_sentiments.get)
 
-        insight = f"{dominant_label} had the highest activity ({dominant_total} posts), and overall sentiment is most {overall_dominant}."
+        total_posts = positive_total + neutral_total + negative_total
+
+        def _share(part, whole):
+            return (part / whole * 100) if whole else 0
+
+        dominant_month_sentiments = {
+            "positive": trend_positive[dominant_idx],
+            "neutral": trend_neutral[dominant_idx],
+            "negative": trend_negative[dominant_idx],
+        }
+        dominant_month_sentiment = max(
+            dominant_month_sentiments, key=dominant_month_sentiments.get
+        )
+        dominant_month_sentiment_count = dominant_month_sentiments[
+            dominant_month_sentiment
+        ]
+
+        latest_idx = len(labels) - 1
+        latest_label = labels[latest_idx]
+        latest_total = totals_by_bucket[latest_idx]
+        latest_month_sentiments = {
+            "positive": trend_positive[latest_idx],
+            "neutral": trend_neutral[latest_idx],
+            "negative": trend_negative[latest_idx],
+        }
+        latest_month_sentiment = max(
+            latest_month_sentiments, key=latest_month_sentiments.get
+        )
+        latest_month_sentiment_count = latest_month_sentiments[latest_month_sentiment]
+
+        insights = [
+            f"Overall sentiment is mostly {overall_dominant} ({overall_sentiments[overall_dominant]} of {total_posts}, {_share(overall_sentiments[overall_dominant], total_posts):.1f}%).",
+            f"{dominant_label} had the highest activity ({dominant_total} posts), with sentiment mostly {dominant_month_sentiment} ({dominant_month_sentiment_count} of {dominant_total}, {_share(dominant_month_sentiment_count, dominant_total):.1f}%).",
+        ]
+
+        if len(labels) > 1:
+            insights.append(
+                f"In the latest month ({latest_label}), sentiment is mostly {latest_month_sentiment} ({latest_month_sentiment_count} of {latest_total}, {_share(latest_month_sentiment_count, latest_total):.1f}%)."
+            )
+
+        insight = insights[0]
 
         return {
             "trend_labels": labels,
@@ -463,6 +537,7 @@ def get_sentiment_trend(solr_query, fq):
             "trend_neutral": trend_neutral,
             "trend_negative": trend_negative,
             "trend_insight": insight,
+            "trend_insights": insights,
         }
 
     except Exception:
@@ -472,15 +547,16 @@ def get_sentiment_trend(solr_query, fq):
             "trend_neutral": [],
             "trend_negative": [],
             "trend_insight": "Trend data could not be generated for the current filters.",
+            "trend_insights": [],
         }
 
 
 # Helper: pre-processing of data for word cloud generation
 def get_wordcloud_data(solr_query, fq, top_n=50):
-    # Pull up to 1000 matching docs to build the word cloud corpus.
-    results = solr.search(solr_query, rows=1000, fl="text", fq=fq)
-
-    all_text = " ".join(doc.get("text", "") for doc in results).lower()
+    # Pull all matching docs to build the word cloud corpus.
+    all_text = " ".join(
+        doc.get("text", "") for doc in _fetch_all_solr_docs(solr_query, fq, fl="text")
+    ).lower()
 
     # Tokenize with regex to avoid punctuation/URL fragments, then remove stopwords.
     words = []
@@ -495,3 +571,24 @@ def get_wordcloud_data(solr_query, fq, top_n=50):
     counter = Counter(words)
     return [[word, count] for word, count in counter.most_common(top_n)]
 
+
+# Helper: generator to fetch all matching Solr documents in batches to avoid memory issues
+def _fetch_all_solr_docs(solr_query, fq, fl, batch_size=1000):
+    """Yield all Solr documents for a query in fixed-size batches."""
+    start = 0
+
+    while True:
+        search_kwargs = {"rows": batch_size, "start": start, "fl": fl}
+        if fq:
+            search_kwargs["fq"] = fq
+
+        results = solr.search(solr_query, **search_kwargs)
+        if not results:
+            break
+
+        for doc in results:
+            yield doc
+
+        start += batch_size
+        if len(results) < batch_size:
+            break

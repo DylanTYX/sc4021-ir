@@ -44,7 +44,7 @@
                     <input type="hidden" name="person"     id="hidPerson"     value="{{ selected_person }}">
                     <input type="hidden" name="date_start" id="hidDateStart"  value="{{ date_start }}">
                     <input type="hidden" name="date_end"   id="hidDateEnd"    value="{{ date_end }}">
-                    <input type="hidden" name="election"   id="hidElection"   value="{{ election_period }}">
+                    <input type="hidden" name="election_year" id="hidElection" value="{{ election_year }}">
                     <input type="hidden" name="sort_by"    id="hidSort"       value="{{ sort_by }}">
                     <button type="submit" class="topnav-search-btn">
                         <i class="bi bi-search"></i>
@@ -116,11 +116,9 @@
                             <select name="party" id="partySelect" class="filter-select"
                                     onchange="document.getElementById('searchForm').submit()">
                                 <option value="">All Parties</option>
-                                <option value="Workers' Party"           {% if selected_party == "Workers' Party" %}selected{% endif %}>Workers' Party (WP)</option>
-                                <option value="People's Action Party"    {% if selected_party == "People's Action Party" %}selected{% endif %}>People's Action Party (PAP)</option>
-                                <option value="Progress Singapore Party" {% if selected_party == 'Progress Singapore Party' %}selected{% endif %}>Progress Singapore Party (PSP)</option>
-                                <option value="Singapore Democratic Party" {% if selected_party == 'Singapore Democratic Party' %}selected{% endif %}>Singapore Democratic Party (SDP)</option>
-                                <option value="People's Power Party"     {% if selected_party == "People's Power Party" %}selected{% endif %}>People's Power Party (PPP)</option>
+                                {% for option in party_options %}
+                                <option value="{{ option.value }}" {% if selected_party == option.value %}selected{% endif %}>{{ option.label }}</option>
+                                {% endfor %}
                             </select>
                         </div>
 
@@ -166,7 +164,7 @@
                             </h6>
                             <!--first dropdown: election year!!-->
                             <select id="electionYear" name="election_year" class="filter-select"
-                                onchange="showSubDropdown()">
+                                onchange="showSubDropdown(); document.getElementById('searchForm').submit()">
                                 <option value="">All Periods</option>
                                 <option value="2020" {% if election_year == "2020" %}selected{% endif %}>
                                     GE 2020 (1/6 - 31/7)
@@ -177,7 +175,7 @@
                             </select>
                             <!--second dropdown: election year!!-->
                             <select id="subDates" name="election_dates" class="filter-select"
-                                onchange="document.getElementById('searchForm').submit()">
+                                onchange="applyElectionPreset()">
                             </select>
                         </div>
 
@@ -272,7 +270,13 @@
                                 <span class="chart-card-title">Sentiment Trend Over Time</span>
                                 <i class="bi bi-graph-up-arrow chart-icon"></i>
                             </div>
-                            {% if trend_insight %}
+                            {% if trend_insights %}
+                            <ul class="chart-insight-list">
+                                {% for item in trend_insights %}
+                                <li class="chart-insight">{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% elif trend_insight %}
                             <p class="chart-insight">{{ trend_insight }}</p>
                             {% endif %}
                             <div class="chart-wrap">
@@ -497,7 +501,13 @@
                 // placeholder parties if labels are empty
                 const labels = (chartData.labels && chartData.labels.length)
                     ? chartData.labels
-                    : ['WP', 'PAP', 'PSP', 'SDP', 'PPP'];
+                    : [
+                        "Workers' Party (WP)",
+                        "People's Action Party (PAP)",
+                        'Progress Singapore Party (PSP)',
+                        'Singapore Democratic Party (SDP)',
+                        "People's Power Party (PPP)"
+                    ];
 
                 const positive = chartData.positive || labels.map(() => 0);
                 const neutral  = chartData.neutral  || labels.map(() => 0);
@@ -616,7 +626,8 @@
                     weightFactor: function(size) {return Math.log2(size)*5},
                     fontFamily: 'Inter, sans-serif',
                     color: 'random-dark',
-                    rotateRatio: 0.3,
+                    rotateRatio: 0.4,
+                    rotationSteps: 2,
                     backgroundColor: '#ffffff',
                     drawOutOfBound: false,
                     shrinkToFit: true,
@@ -658,6 +669,28 @@
                 }
 
                 subDropdown.innerHTML = options;
+                subDropdown.value = '';
+            }
+
+            function applyElectionPreset() {
+                const year = document.getElementById('electionYear').value;
+                const preset = document.getElementById('subDates').value;
+                const dateStart = document.getElementById('dateStart');
+                const dateEnd = document.getElementById('dateEnd');
+
+                const presets = {
+                    nomination_2020: ['2020-06-30', '2020-06-30'],
+                    polling_2020: ['2020-07-10', '2020-07-10'],
+                    nomination_2025: ['2025-04-23', '2025-04-23'],
+                    polling_2025: ['2025-05-03', '2025-05-03'],
+                };
+
+                if (year && presets[preset]) {
+                    dateStart.value = presets[preset][0];
+                    dateEnd.value = presets[preset][1];
+                }
+
+                document.getElementById('searchForm').submit();
             }
 
             // Initialise on page load so the dropdown is always in the correct state
@@ -678,7 +711,7 @@
                 document.getElementById('hidPerson').value = document.getElementById('personSelect')?.value || '';
                 document.getElementById('hidDateStart').value = document.getElementById('dateStart')?.value || '';
                 document.getElementById('hidDateEnd').value = document.getElementById('dateEnd')?.value || '';
-                document.getElementById('hidElection').value = document.getElementById('electionToggle')?.checked ? '1' : '';
+                document.getElementById('hidElection').value = document.getElementById('electionYear')?.value || '';
                 document.getElementById('hidSort').value = document.getElementById('sortSelect')?.value || '';
             });
         </script>
