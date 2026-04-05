@@ -580,6 +580,13 @@ body {
   color: var(--grey-deep);
   line-height: 1.5;
 }
+.chart-insight-list {
+  margin: 0 0 14px;
+  padding-left: 18px;
+}
+.chart-insight-list .chart-insight {
+  margin: 0 0 6px;
+}
 .chart-icon {
   font-size: 15px;
   color: var(--grey-mid);

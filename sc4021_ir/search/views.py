@@ -306,6 +306,7 @@ def search_view(request):
         "wordcloud_data": json.dumps(wordcloud_data),
         "election_year": election_year,
         "trend_insight": chart_data.get("trend_insight", ""),
+        "trend_insights": chart_data.get("trend_insights", []),
     }
 
     return render(request, "search/index.html", context)
@@ -349,8 +350,8 @@ def get_sentiment_distribution(solr_query, fq):
         search_kwargs = {
             "rows": 0,
             "facet": "on",
-            "facet.field": "sentiment",         # pie chart
-            "facet.pivot": "party,sentiment",   # bar graph
+            "facet.field": "sentiment",  # pie chart
+            "facet.pivot": "party,sentiment",  # bar graph
             "facet.mincount": 1,
         }
         if fq:
@@ -373,9 +374,9 @@ def get_sentiment_distribution(solr_query, fq):
         for party_item in pivot.get("party,sentiment", []):
             party_name = party_item["value"]
             for sentiment_item in party_item.get("pivot", []):
-                parties_data[party_name][sentiment_item["value"].lower()] = sentiment_item[
-                    "count"
-                ]
+                parties_data[party_name][sentiment_item["value"].lower()] = (
+                    sentiment_item["count"]
+                )
 
         sorted_parties = sorted(parties_data.keys())
         return {
@@ -383,7 +384,6 @@ def get_sentiment_distribution(solr_query, fq):
             "total_positive": total_sent["positive"],
             "total_neutral": total_sent["neutral"],
             "total_negative": total_sent["negative"],
-
             # For bar graph
             "labels": sorted_parties,
             "positive": [parties_data[p]["positive"] for p in sorted_parties],
@@ -422,6 +422,7 @@ def get_sentiment_trend(solr_query, fq):
                 "trend_neutral": [],
                 "trend_negative": [],
                 "trend_insight": "No dated documents are available yet, so the trend chart has nothing to plot.",
+                "trend_insights": [],
             }
 
         sorted_buckets = sorted(monthly_counts.keys())
@@ -455,7 +456,47 @@ def get_sentiment_trend(solr_query, fq):
         }
         overall_dominant = max(overall_sentiments, key=overall_sentiments.get)
 
-        insight = f"{dominant_label} had the highest activity ({dominant_total} posts), and overall sentiment is most {overall_dominant}."
+        total_posts = positive_total + neutral_total + negative_total
+
+        def _share(part, whole):
+            return (part / whole * 100) if whole else 0
+
+        dominant_month_sentiments = {
+            "positive": trend_positive[dominant_idx],
+            "neutral": trend_neutral[dominant_idx],
+            "negative": trend_negative[dominant_idx],
+        }
+        dominant_month_sentiment = max(
+            dominant_month_sentiments, key=dominant_month_sentiments.get
+        )
+        dominant_month_sentiment_count = dominant_month_sentiments[
+            dominant_month_sentiment
+        ]
+
+        latest_idx = len(labels) - 1
+        latest_label = labels[latest_idx]
+        latest_total = totals_by_bucket[latest_idx]
+        latest_month_sentiments = {
+            "positive": trend_positive[latest_idx],
+            "neutral": trend_neutral[latest_idx],
+            "negative": trend_negative[latest_idx],
+        }
+        latest_month_sentiment = max(
+            latest_month_sentiments, key=latest_month_sentiments.get
+        )
+        latest_month_sentiment_count = latest_month_sentiments[latest_month_sentiment]
+
+        insights = [
+            f"Overall sentiment is mostly {overall_dominant} ({overall_sentiments[overall_dominant]} of {total_posts}, {_share(overall_sentiments[overall_dominant], total_posts):.1f}%).",
+            f"{dominant_label} had the highest activity ({dominant_total} posts), with sentiment mostly {dominant_month_sentiment} ({dominant_month_sentiment_count} of {dominant_total}, {_share(dominant_month_sentiment_count, dominant_total):.1f}%).",
+        ]
+
+        if len(labels) > 1:
+            insights.append(
+                f"In the latest month ({latest_label}), sentiment is mostly {latest_month_sentiment} ({latest_month_sentiment_count} of {latest_total}, {_share(latest_month_sentiment_count, latest_total):.1f}%)."
+            )
+
+        insight = insights[0]
 
         return {
             "trend_labels": labels,
@@ -463,6 +504,7 @@ def get_sentiment_trend(solr_query, fq):
             "trend_neutral": trend_neutral,
             "trend_negative": trend_negative,
             "trend_insight": insight,
+            "trend_insights": insights,
         }
 
     except Exception:
@@ -472,6 +514,7 @@ def get_sentiment_trend(solr_query, fq):
             "trend_neutral": [],
             "trend_negative": [],
             "trend_insight": "Trend data could not be generated for the current filters.",
+            "trend_insights": [],
         }
 
 
@@ -494,4 +537,3 @@ def get_wordcloud_data(solr_query, fq, top_n=50):
 
     counter = Counter(words)
     return [[word, count] for word, count in counter.most_common(top_n)]
-

@@ -272,7 +272,13 @@
                                 <span class="chart-card-title">Sentiment Trend Over Time</span>
                                 <i class="bi bi-graph-up-arrow chart-icon"></i>
                             </div>
-                            {% if trend_insight %}
+                            {% if trend_insights %}
+                            <ul class="chart-insight-list">
+                                {% for item in trend_insights %}
+                                <li class="chart-insight">{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% elif trend_insight %}
                             <p class="chart-insight">{{ trend_insight }}</p>
                             {% endif %}
                             <div class="chart-wrap">
