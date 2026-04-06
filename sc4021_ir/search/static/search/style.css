@@ -71,8 +71,8 @@
   --glass-text: #1f3348;
   --glass-muted: #64748b;
 
-  --shadow-card: 0 10px 26px rgba(15, 42, 69, 0.08),
-    0 2px 8px rgba(15, 42, 69, 0.04);
+  --shadow-card:
+    0 10px 26px rgba(15, 42, 69, 0.08), 0 2px 8px rgba(15, 42, 69, 0.04);
   --shadow-sm: 0 2px 8px rgba(15, 42, 69, 0.08);
   --shadow-hover: 0 16px 34px rgba(15, 42, 69, 0.14);
 }
