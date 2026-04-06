@@ -4,9 +4,9 @@ An opinion search engine for analysing Reddit sentiments toward Singapore's Work
 
 ## Prerequisites
 
-- **Python 3.11+** — [Download](https://www.python.org/downloads/)
-- **Docker Desktop** — [Download](https://www.docker.com/products/docker-desktop/) (runs Solr)
-- **Jupyter Notebook** — included with Anaconda, or `pip install notebook`
+- **Python 3.11+** | [Download](https://www.python.org/downloads/)
+- **Docker Desktop** | [Download](https://www.docker.com/products/docker-desktop/) (runs Solr)
+- **Jupyter Notebook** | included with Anaconda, or `pip install notebook`
 
 ## Setup
 
@@ -67,8 +67,8 @@ python scrape1.py
 ### 2. Data Cleaning
 
 Open `clean_wp_levels.ipynb` in Jupyter and run all cells. Cleans the raw JSON (HTML unescape, mojibake repair, timestamp conversion to SGT, removal of deleted/bot/short comments, deduplication) and produces two CSVs in `data/output from crawling & scraping/`:
-- `singapore_wp_comments_display.csv` — URLs kept, for indexing
-- `singapore_wp_comments_training.csv` — URLs removed, for classification
+- `singapore_wp_comments_display.csv` | URLs kept, for indexing
+- `singapore_wp_comments_training.csv` | URLs removed, for classification
 
 ### 3. Inter-Annotator Agreement
 
@@ -76,11 +76,11 @@ Open `fleiss_kappa_book1.ipynb` to compute Fleiss' Kappa across three annotators
 
 ### 4. Classification
 
-**SVM pipeline** — run the notebooks in order:
+**SVM pipeline** | run the notebooks in order:
 
-1. `classification/svm/01_preprocess_training_data.ipynb` — preprocesses the labelled data
-2. `classification/svm/02_train_svm_model.ipynb` — trains LinearSVC with TF-IDF features, saves model to `model_artifacts/`
-3. `classification/svm/03_inference_new_data.ipynb` — classifies the full corpus and outputs results for indexing
+1. `classification/svm/01_preprocess_training_data.ipynb` | preprocesses the labelled data
+2. `classification/svm/02_train_svm_model.ipynb` | trains LinearSVC with TF-IDF features, saves model to `model_artifacts/`
+3. `classification/svm/03_inference_new_data.ipynb` | classifies the full corpus and outputs results for indexing
 
 **ELECTRA pipeline:**
 
