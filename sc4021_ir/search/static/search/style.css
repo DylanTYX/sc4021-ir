@@ -19,6 +19,7 @@
   --grey-mid: #cbd5e1;
   --white: #ffffff;
   --text: #1e293b;
+  --grey-deep: #334155;
   --text-muted: #64748b;
   --border: rgba(255, 255, 255, 0.12);
 
@@ -42,6 +43,38 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-text: rgba(255, 255, 255, 0.9);
   --glass-muted: rgba(255, 255, 255, 0.5);
+}
+
+:root[data-theme="light"] {
+  --navy: #173454;
+  --navy-dark: #0f2a45;
+  --navy-light: #e5eef8;
+  --red: #c63b3b;
+  --red-light: #fce8e8;
+  --green: #0f9f6e;
+  --green-light: #d8f5e8;
+  --grey: #58677a;
+  --grey-light: #eef3f8;
+  --grey-mid: #9eb0c5;
+  --white: #ffffff;
+  --text: #1e293b;
+  --grey-deep: #334155;
+  --text-muted: #5f6d82;
+  --border: rgba(15, 42, 69, 0.08);
+
+  --bg-a: #f3f7fb;
+  --bg-b: #edf3f9;
+  --bg-c: #f7fafc;
+
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(15, 42, 69, 0.1);
+  --glass-text: #1f3348;
+  --glass-muted: #64748b;
+
+  --shadow-card: 0 10px 26px rgba(15, 42, 69, 0.08),
+    0 2px 8px rgba(15, 42, 69, 0.04);
+  --shadow-sm: 0 2px 8px rgba(15, 42, 69, 0.08);
+  --shadow-hover: 0 16px 34px rgba(15, 42, 69, 0.14);
 }
 
 html {
@@ -136,6 +169,32 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.theme-toggle {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+.theme-toggle i {
+  font-size: 13px;
 }
 
 .topnav-search {
@@ -862,4 +921,192 @@ body {
 }
 .welcome-hint i {
   color: rgba(230, 57, 70, 0.7);
+}
+
+/* LIGHT THEME OVERRIDES */
+:root[data-theme="light"] .topnav {
+  background: rgba(255, 255, 255, 0.78);
+  border-bottom: 1px solid rgba(15, 42, 69, 0.1);
+  box-shadow: 0 4px 20px rgba(15, 42, 69, 0.08);
+}
+
+:root[data-theme="light"] .brand-title {
+  color: #13283f;
+}
+
+:root[data-theme="light"] .brand-sub {
+  color: rgba(19, 40, 63, 0.55);
+}
+
+:root[data-theme="light"] .topnav-search {
+  background: rgba(15, 42, 69, 0.04);
+  border-color: rgba(15, 42, 69, 0.14);
+}
+
+:root[data-theme="light"] .topnav-search:focus-within {
+  background: rgba(15, 42, 69, 0.07);
+  border-color: rgba(198, 59, 59, 0.45);
+  box-shadow: 0 0 0 3px rgba(198, 59, 59, 0.16);
+}
+
+:root[data-theme="light"] .topnav-search-input {
+  color: #1f3348;
+}
+
+:root[data-theme="light"] .topnav-search-input::placeholder {
+  color: #6d7f95;
+}
+
+:root[data-theme="light"] .theme-toggle {
+  background: rgba(15, 42, 69, 0.05);
+  border-color: rgba(15, 42, 69, 0.14);
+  color: #1f3348;
+}
+
+:root[data-theme="light"] .theme-toggle:hover {
+  background: rgba(15, 42, 69, 0.1);
+  border-color: rgba(15, 42, 69, 0.2);
+}
+
+:root[data-theme="light"] .topnav-active-pill {
+  background: rgba(198, 59, 59, 0.12);
+  color: #9f2a2a;
+}
+
+:root[data-theme="light"] .sidebar {
+  background: rgba(255, 255, 255, 0.86);
+  border-right-color: rgba(15, 42, 69, 0.1);
+}
+
+:root[data-theme="light"] .filter-section {
+  border-bottom-color: rgba(15, 42, 69, 0.08);
+}
+
+:root[data-theme="light"] .filter-chip:hover {
+  background: rgba(15, 42, 69, 0.06);
+  color: #1f3348;
+}
+
+:root[data-theme="light"] .filter-chip.active {
+  background: rgba(15, 42, 69, 0.08);
+  color: #10273f;
+  border-color: rgba(15, 42, 69, 0.14);
+}
+
+:root[data-theme="light"] .filter-select,
+:root[data-theme="light"] .filter-date {
+  border-color: rgba(15, 42, 69, 0.14);
+  color: #1f3348;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+:root[data-theme="light"] .filter-select option {
+  background: #ffffff;
+  color: #1f3348;
+}
+
+:root[data-theme="light"] .filter-date {
+  color-scheme: light;
+}
+
+:root[data-theme="light"] .toggle-slider {
+  background: rgba(15, 42, 69, 0.12);
+  border-color: rgba(15, 42, 69, 0.16);
+}
+
+:root[data-theme="light"] .toggle-slider::before {
+  background: #ffffff;
+}
+
+:root[data-theme="light"] .btn-clear-all {
+  background: rgba(198, 59, 59, 0.08);
+  border-color: rgba(198, 59, 59, 0.24);
+  color: #9f2a2a;
+}
+
+:root[data-theme="light"] .section-title {
+  color: #13283f;
+}
+
+:root[data-theme="light"] .results-meta {
+  color: #5f6d82;
+}
+
+:root[data-theme="light"] .results-meta strong {
+  color: #1f3348;
+}
+
+:root[data-theme="light"] .results-meta em {
+  color: #41566f;
+}
+
+:root[data-theme="light"] .hero-strip {
+  background: linear-gradient(
+    135deg,
+    rgba(198, 59, 59, 0.1) 0%,
+    rgba(23, 52, 84, 0.08) 100%
+  );
+  border-color: rgba(23, 52, 84, 0.12);
+}
+
+:root[data-theme="light"] .hero-title {
+  color: #13283f;
+}
+
+:root[data-theme="light"] .hero-sub,
+:root[data-theme="light"] .stat-pill,
+:root[data-theme="light"] .page-info {
+  color: #5f6d82;
+}
+
+:root[data-theme="light"] .stat-pill {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(15, 42, 69, 0.12);
+}
+
+:root[data-theme="light"] .stat-pill strong {
+  color: #13283f;
+}
+
+:root[data-theme="light"] .page-btn {
+  border-color: rgba(15, 42, 69, 0.14);
+  color: #314760;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+:root[data-theme="light"] .page-btn:hover {
+  background: rgba(15, 42, 69, 0.08);
+  border-color: rgba(15, 42, 69, 0.2);
+  color: #13283f;
+}
+
+:root[data-theme="light"] .empty-state,
+:root[data-theme="light"] .welcome-state {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(15, 42, 69, 0.1);
+}
+
+:root[data-theme="light"] .empty-icon,
+:root[data-theme="light"] .welcome-card-icon {
+  color: #6b7e95;
+}
+
+:root[data-theme="light"] .empty-state h4,
+:root[data-theme="light"] .welcome-card h5 {
+  color: #1f3348;
+}
+
+:root[data-theme="light"] .empty-state p,
+:root[data-theme="light"] .welcome-card p,
+:root[data-theme="light"] .welcome-hint {
+  color: #5f6d82;
+}
+
+:root[data-theme="light"] .welcome-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(15, 42, 69, 0.1);
+}
+
+:root[data-theme="light"] .welcome-card:hover {
+  background: rgba(255, 255, 255, 1);
 }

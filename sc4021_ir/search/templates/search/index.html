@@ -5,6 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Singapore Political Sentiment Analysis - SC4021</title>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('sc4021_theme');
+            if (savedTheme === 'light' || savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -50,6 +58,10 @@
                         <i class="bi bi-search"></i>
                     </button>
                 </form>
+                <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle color theme">
+                    <i class="bi bi-moon-stars-fill" id="themeToggleIcon"></i>
+                    <span id="themeToggleLabel">Dark</span>
+                </button>
                 {% if query or selected_sentiment or selected_party or selected_person %}
                 <span class="topnav-active-pill">
                     <i class="bi bi-funnel-fill"></i> Filters active
@@ -450,6 +462,38 @@
             const COLOR_NEG = '#ef4444';
             const COLOR_NAVY = '#1a3a5c';
             const COLOR_ACCENT = '#c0392b';
+
+            {% comment %} Theme toggle {% endcomment %}
+            const THEME_STORAGE_KEY = 'sc4021_theme';
+            const themeToggleBtn = document.getElementById('themeToggle');
+            const themeToggleIcon = document.getElementById('themeToggleIcon');
+            const themeToggleLabel = document.getElementById('themeToggleLabel');
+
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                if (!themeToggleIcon || !themeToggleLabel) return;
+
+                if (theme === 'light') {
+                    themeToggleIcon.className = 'bi bi-sun-fill';
+                    themeToggleLabel.textContent = 'Light';
+                } else {
+                    themeToggleIcon.className = 'bi bi-moon-stars-fill';
+                    themeToggleLabel.textContent = 'Dark';
+                }
+            }
+
+            const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+            const initialTheme = (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
+            applyTheme(initialTheme);
+
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', () => {
+                    const currentTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+                    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    applyTheme(nextTheme);
+                    localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+                });
+            }
 
             {% comment %} Common Chart defaults {% endcomment %}
             Chart.defaults.font.family = "'Inter', sans-serif";
