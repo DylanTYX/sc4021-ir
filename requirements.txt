@@ -1,5 +1,26 @@
+# ── Web Application (Django + Solr) ──
 Django==5.2.11
 pysolr==3.11.0
 python-dateutil==2.9.0.post0
 gunicorn==25.1.0
 python-dotenv==1.2.1
+
+# ── Crawling & Scraping ──
+requests>=2.31.0
+
+# ── Data Cleaning & Annotation ──
+pandas>=2.1.0
+openpyxl>=3.1.0
+statsmodels>=0.14.0
+
+# ── Classification (SVM) ──
+scikit-learn>=1.3.0
+numpy>=1.24.0
+spacy>=3.7.0
+nltk>=3.8.0
+
+# ── Classification (ELECTRA) ──
+torch>=2.0.0
+transformers>=4.35.0
+emoji>=2.8.0
+matplotlib>=3.8.0
