@@ -36,6 +36,17 @@
                 </div>
             </div>
             <div class="topnav-right">
+                <div class="topnav-controls">
+                    {% if query or selected_sentiment or selected_party or selected_person %}
+                    <span class="topnav-active-pill">
+                        <i class="bi bi-funnel-fill"></i> Filters active
+                    </span>
+                    {% endif %}
+                    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle color theme">
+                        <i class="bi bi-moon-stars-fill" id="themeToggleIcon"></i>
+                        <span id="themeToggleLabel">Dark</span>
+                    </button>
+                </div>
                 <form method="GET" action="{% url 'search' %}" class="topnav-search" id="searchFormTop">
                     <input
                         type="text"
@@ -58,15 +69,6 @@
                         <i class="bi bi-search"></i>
                     </button>
                 </form>
-                <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle color theme">
-                    <i class="bi bi-moon-stars-fill" id="themeToggleIcon"></i>
-                    <span id="themeToggleLabel">Dark</span>
-                </button>
-                {% if query or selected_sentiment or selected_party or selected_person %}
-                <span class="topnav-active-pill">
-                    <i class="bi bi-funnel-fill"></i> Filters active
-                </span>
-                {% endif %}
             </div>
         </nav>
 
@@ -86,14 +88,14 @@
                             </h6>
                             <div class="filter-options">
                                 {% for val, label, icon in sentiment_choices %}
-                                <label class="filter-chip {% if selected_sentiment == val %}active{% endif %}">
+                                <label class="filter-chip {% if val == '' %}sentiment-all{% endif %} {% if selected_sentiment == val %}active{% endif %}">
                                     <input type="radio" name="sentiment" value="{{ val }}"
                                         {% if selected_sentiment == val %}checked{% endif %}
                                         onchange="document.getElementById('searchForm').submit()">
                                     {{ icon }} {{ label }}
                                 </label>
                                 {% empty %}
-                                <label class="filter-chip {% if selected_sentiment == '' %}active{% endif %}">
+                                <label class="filter-chip sentiment-all {% if selected_sentiment == '' %}active{% endif %}">
                                     <input type="radio" name="sentiment" value=""
                                         {% if selected_sentiment == '' %}checked{% endif %}
                                         onchange="document.getElementById('searchForm').submit()"> All
@@ -142,13 +144,9 @@
                             <select name="person" id="personSelect" class="filter-select"
                                     onchange="document.getElementById('searchForm').submit()">
                                 <option value="">All Figures</option>
-                                <option value="Pritam Singh"    {% if selected_person == 'Pritam Singh' %}selected{% endif %}>Pritam Singh</option>
-                                <option value="Sylvia Lim"      {% if selected_person == 'Sylvia Lim' %}selected{% endif %}>Sylvia Lim</option>
-                                <option value="Leon Perera"     {% if selected_person == 'Leon Perera' %}selected{% endif %}>Leon Perera</option>
-                                <option value="Lee Hsien Loong" {% if selected_person == 'Lee Hsien Loong' %}selected{% endif %}>Lee Hsien Loong</option>
-                                <option value="Lawrence Wong"   {% if selected_person == 'Lawrence Wong' %}selected{% endif %}>Lawrence Wong</option>
-                                <option value="Tan Cheng Bock"  {% if selected_person == 'Tan Cheng Bock' %}selected{% endif %}>Tan Cheng Bock</option>
-                                <option value="Goh Meng Seng"   {% if selected_person == 'Goh Meng Seng' %}selected{% endif %}>Goh Meng Seng</option>
+                                {% for option in person_options %}
+                                <option value="{{ option.value }}" {% if selected_person == option.value %}selected{% endif %}>{{ option.label }}</option>
+                                {% endfor %}
                             </select>
                         </div>
 
@@ -203,7 +201,6 @@
                                 <option value="relevance" {% if sort_by == 'relevance' or not sort_by %}selected{% endif %}>Relevance</option>
                                 <option value="newest"    {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
                                 <option value="oldest"    {% if sort_by == 'oldest' %}selected{% endif %}>Oldest First</option>
-                                <option value="upvotes"   {% if sort_by == 'upvotes' %}selected{% endif %}>Most Upvotes</option>
                             </select>
                         </div>
 
@@ -332,11 +329,6 @@
                                         {% endif %}
                                     </span>
                                     <div class="comment-meta-right">
-                                        {% if result.upvotes %}
-                                        <span class="upvote-pill">
-                                            <i class="bi bi-arrow-up-circle-fill"></i> {{ result.upvotes }}
-                                        </span>
-                                        {% endif %}
                                         <span class="comment-date">
                                             <i class="bi bi-clock"></i>
                                             {{ result.created_at|date:"d M Y" }}
@@ -664,10 +656,17 @@
             function buildWordCloud(words) 
             {   
                 // words = array of [word, weight] pairs
+                const maxWeight = Math.max(...words.map(([, weight]) => weight), 1);
+                const normalizedWords = words.map(([word, weight]) => {
+                    const normalized = weight / maxWeight;
+                    const displayWeight = 28 + (normalized * 38);
+                    return [word, displayWeight];
+                });
+
                 WordCloud(document.getElementById('wordCloudContainer'), {
-                    list: words,
-                    gridSize: 8,
-                    weightFactor: function(size) {return Math.log2(size)*5},
+                    list: normalizedWords,
+                    gridSize: 9,
+                    weightFactor: function(size) { return size; },
                     fontFamily: 'Inter, sans-serif',
                     color: 'random-dark',
                     rotateRatio: 0.4,
@@ -675,7 +674,7 @@
                     backgroundColor: '#ffffff',
                     drawOutOfBound: false,
                     shrinkToFit: true,
-                    minSize: 8,
+                    minSize: 11,
                 });
             }
 

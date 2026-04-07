@@ -207,41 +207,63 @@ SORT_OPTIONS = {
     "relevance": "score desc",
     "newest": "created_at desc",
     "oldest": "created_at asc",
-    "upvotes": "upvotes desc",
 }
 
-PARTY_OPTIONS = [
-    {"value": "Workers Party", "label": "Workers' Party (WP)"},
-    {"value": "Peoples Action Party", "label": "People's Action Party (PAP)"},
-    {"value": "Progress Singapore Party", "label": "Progress Singapore Party (PSP)"},
-    {
-        "value": "Singapore Democratic Party",
-        "label": "Singapore Democratic Party (SDP)",
-    },
-    {"value": "People's Power Party", "label": "People's Power Party (PPP)"},
-]
-
-PARTY_VALUE_ALIASES = {
-    "Workers' Party": "Workers Party",
-    "Workers Party": "Workers Party",
-    "People's Action Party": "Peoples Action Party",
-    "Peoples Action Party": "Peoples Action Party",
-    "People's Power Party": "People's Power Party",
-    "Peoples Power Party": "People's Power Party",
-    "Progress Singapore Party": "Progress Singapore Party",
-    "Singapore Democratic Party": "Singapore Democratic Party",
+# Canonical party naming for display and filtering.
+PARTY_ALIAS_MAP = {
+    "Workers' Party": [
+        "Workers' Party",
+        "Workers Party",
+        "workers' party",
+        "workers party",
+    ],
+    "People's Action Party": [
+        "People's Action Party",
+        "Peoples Action Party",
+        "people's action party",
+        "peoples action party",
+    ],
+    "Progress Singapore Party": [
+        "Progress Singapore Party",
+        "progress singapore party",
+    ],
+    "Singapore Democratic Party": [
+        "Singapore Democratic Party",
+        "singapore democratic party",
+    ],
+    "People's Power Party": [
+        "People's Power Party",
+        "Peoples Power Party",
+        "people's power party",
+        "peoples power party",
+    ],
 }
 
-PARTY_LABEL_BY_VALUE = {option["value"]: option["label"] for option in PARTY_OPTIONS}
+PARTY_CANONICAL_LOOKUP = {
+    alias.strip().lower(): canonical
+    for canonical, aliases in PARTY_ALIAS_MAP.items()
+    for alias in aliases
+}
 
 
-def normalize_party_value(party_value):
-    return PARTY_VALUE_ALIASES.get(party_value, party_value)
+def canonical_party_name(value):
+    if not value:
+        return value
+    return PARTY_CANONICAL_LOOKUP.get(value.strip().lower(), value)
 
 
-def format_party_label(party_value):
-    normalized_value = normalize_party_value(party_value)
-    return PARTY_LABEL_BY_VALUE.get(normalized_value, normalized_value)
+def get_party_filter_values(selected_party):
+    """Return all raw index values that should match a selected canonical party."""
+    if not selected_party:
+        return []
+
+    target = canonical_party_name(selected_party)
+    matches = set(PARTY_ALIAS_MAP.get(target, []))
+
+    # Include canonical and user-provided forms as a safe fallback.
+    matches.add(target)
+    matches.add(selected_party)
+    return sorted(matches)
 
 
 # Main search view
@@ -255,7 +277,7 @@ def search_view(request):
     sort_by = request.GET.get("sort_by", "relevance").strip()
     page_num = max(1, int(request.GET.get("page", 1)))
     election_year = request.GET.get("election_year", "").strip()
-    selected_party = normalize_party_value(selected_party)
+    selected_party = canonical_party_name(selected_party)
 
     # Full-text search on the "text" field; fall back to match-all
     solr_query = f"text:({query})" if query else "*:*"
@@ -276,10 +298,13 @@ def search_view(request):
     # Pagination
     start = (page_num - 1) * ROWS_PER_PAGE
 
+    # Get dynamic dropdown options from indexed values
+    party_options, person_options = get_filter_options()
+
     # Execute search
     try:
         search_kwargs = {
-            "fl": "text,clean_text,sentiment,sentiment_score,party,person,aspect,created_at,id,upvotes",
+            "fl": "text,clean_text,sentiment,sentiment_score,party,person,aspect,created_at,id",
             "sort": sort,
         }
         if fq:
@@ -303,12 +328,13 @@ def search_view(request):
                 "clean_text": doc.get("clean_text", ""),
                 "sentiment": doc.get("sentiment", ""),
                 "sentiment_score": doc.get("sentiment_score"),
-                "party": [format_party_label(party) for party in doc.get("party", [])],
+                "party": [
+                    canonical_party_name(party) for party in doc.get("party", [])
+                ],
                 "person": doc.get("person", []),
                 "aspect": doc.get("aspect", []),
                 "created_at": parser.parse(raw_date) if raw_date else None,
                 "id": doc.get("id", ""),
-                "upvotes": doc.get("upvotes", 0),
             }
         )
 
@@ -341,7 +367,8 @@ def search_view(request):
         "election_year": election_year,
         "trend_insight": chart_data.get("trend_insight", ""),
         "trend_insights": chart_data.get("trend_insights", []),
-        "party_options": PARTY_OPTIONS,
+        "party_options": party_options,
+        "person_options": person_options,
     }
 
     return render(request, "search/index.html", context)
@@ -358,8 +385,12 @@ def _build_filter_queries(
         fq.append(f"sentiment:{sentiment.capitalize()}")
 
     if party:
-        # Quote multi-word values
-        fq.append(f'party:"{party}"')
+        party_values = get_party_filter_values(party)
+        if len(party_values) == 1:
+            fq.append(f'party:"{party_values[0]}"')
+        else:
+            party_or = " OR ".join([f'party:"{value}"' for value in party_values])
+            fq.append(f"({party_or})")
 
     if person:
         fq.append(f'person:"{person}"')
@@ -376,6 +407,55 @@ def _build_filter_queries(
         fq.append("created_at:[2025-04-01T00:00:00Z TO 2025-05-31T23:59:59Z]")
 
     return fq
+
+
+def get_filter_options():
+    """Return party/person options directly from Solr index values, sorted alphabetically."""
+    try:
+        facet_results = solr.search(
+            "*:*",
+            rows=0,
+            **{
+                "facet": "on",
+                "facet.field": ["party", "person"],
+                "facet.mincount": 1,
+                "facet.limit": -1,
+            },
+        )
+
+        facet_fields = facet_results.raw_response.get("facet_counts", {}).get(
+            "facet_fields", {}
+        )
+
+        party_values = _parse_facet_values(facet_fields.get("party", []))
+        person_values = _parse_facet_values(facet_fields.get("person", []))
+
+        canonical_party_values = sorted(
+            {canonical_party_name(value) for value in party_values},
+            key=lambda s: s.lower(),
+        )
+
+        party_options = [
+            {"value": value, "label": value} for value in canonical_party_values
+        ]
+        person_options = [
+            {"value": value, "label": value}
+            for value in sorted(person_values, key=lambda s: s.lower())
+        ]
+
+        return party_options, person_options
+    except Exception:
+        return [], []
+
+
+def _parse_facet_values(facet_list):
+    """Convert Solr facet field list format [value, count, ...] to value list."""
+    values = []
+    for i in range(0, len(facet_list), 2):
+        value = facet_list[i]
+        if value:
+            values.append(value)
+    return values
 
 
 # Helper: sentiment distribution per party for Chart.js
@@ -407,7 +487,7 @@ def get_sentiment_distribution(solr_query, fq):
         pivot = facet_counts.get("facet_pivot", {})
 
         for party_item in pivot.get("party,sentiment", []):
-            party_name = format_party_label(party_item["value"])
+            party_name = canonical_party_name(party_item["value"])
             for sentiment_item in party_item.get("pivot", []):
                 parties_data[party_name][sentiment_item["value"].lower()] = (
                     sentiment_item["count"]
