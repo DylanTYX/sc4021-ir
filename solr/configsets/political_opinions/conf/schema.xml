@@ -10,6 +10,7 @@
   <uniqueKey>id</uniqueKey>
 
   <!-- Core fields -->
+  <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false"/>
   <field name="text" type="text_en" indexed="true" stored="true"/>
   <field name="clean_text" type="text_en" indexed="true" stored="true"/>
   <field name="sentiment" type="string" indexed="true" stored="true"/>
@@ -18,8 +19,6 @@
   <field name="person" type="string" indexed="true" stored="true" multiValued="true"/>
   <field name="aspect" type="string" indexed="true" stored="true" multiValued="true"/>
   <field name="created_at" type="pdate" indexed="true" stored="true"/>
-  <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false"/>
-  <field name="upvotes" type="pint" indexed="true" stored="true"/>
 
   <!-- Required internal field -->
   <field name="_version_" type="plong" indexed="false" stored="false"/>
